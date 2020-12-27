@@ -1,0 +1,26 @@
+{
+  "name": "heo-eth",
+  "version": "1.0.0",
+  "description": "Ethereum contracts for Help Each Other platform",
+  "main": "index.js",
+  "directories": {
+    "test": "test"
+  },
+  "dependencies": {
+    "@openzeppelin/contracts": "^3.3.0"
+  },
+  "devDependencies": {},
+  "scripts": {
+    "test": "npm test"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+ssh://git@github.com/grishick/heo-eth.git"
+  },
+  "author": "Greg Solovyev",
+  "license": "SEE LICENSE IN License.md\"",
+  "bugs": {
+    "url": "https://github.com/grishick/heo-eth/issues"
+  },
+  "homepage": "https://github.com/grishick/heo-eth#readme"
+}
