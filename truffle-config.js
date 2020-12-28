@@ -25,5 +25,12 @@ module.exports = {
             docker: false, // Use a version obtained through docker
             parser: "solcjs", // Leverages solc-js purely for speedy parsing
         }
+    },
+    networks: {
+        development:{
+            host:"127.0.0.1",
+            port:7545,
+            network_id:"5777"
+        }
     }
 };
