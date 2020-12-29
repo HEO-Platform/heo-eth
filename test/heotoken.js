@@ -1,5 +1,5 @@
 const HEOToken = artifacts.require("HEOToken");
-
+const HEOManualDistribution = artifacts.require("HEOManualDistribution");
 contract('HEOToken', (accounts) => {
   it('should initialize correctly', async () => {
     const heoTokenInstance = await HEOToken.deployed();
@@ -15,246 +15,152 @@ contract('HEOToken', (accounts) => {
 
     const owner = await heoTokenInstance.owner.call();
     assert.equal(owner, accounts[0], "accounts[0] should be the owner");
-
-    const privateSaleLimit = await heoTokenInstance.privateSaleLimit.call();
-    assert.equal(privateSaleLimit, 85000, "Expecting private sale limit to be set to 85000");
-
-    const publicSaleLimit = await heoTokenInstance.publicSaleLimit.call();
-    assert.equal(publicSaleLimit, 900000, "Expecting public sale limit to be set to 900000");
-
-    const charityLimit = await heoTokenInstance.charityLimit.call();
-    assert.equal(charityLimit, 10000, "Expecting charity limit to be set to 10000");
-
-    const bountyLimit = await heoTokenInstance.bountyLimit.call();
-    assert.equal(bountyLimit, 5000, "Expecting bounty limit to be set to 5000");
-
-    const privateSaleSold = await heoTokenInstance.privateSaleSold.call();
-    assert.equal(privateSaleSold, 0, "Expecting number of tokens sold on private sale to be 0");
   });
 
-  it('should mint HEO tokens via private sale', async () => {
+  it('should add/remove minters and burners correctly', async() => {
     const heoTokenInstance = await HEOToken.deployed();
+    const ownerAccount = accounts[0];
+    const rogueAccount = accounts[2];
+    try {
+      await heoTokenInstance.addMinter("0x0000000000000000000000000000000000000000", {from: ownerAccount});
+      assert.fail("Should not be able to add zero address as minter.");
+    } catch (err) {
+      assert.equal("HEOToken: zero-address cannot be a minter.", err.reason);
+    }
+    try {
+      await heoTokenInstance.addBurner("0x0000000000000000000000000000000000000000", {from: ownerAccount});
+      assert.fail("Should not be able to add zero address as burner.");
+    } catch (err) {
+      assert.equal("HEOToken: zero-address cannot be a burner.", err.reason);
+    }
+    try {
+      await heoTokenInstance.removeMinter("0x0000000000000000000000000000000000000000", {from: ownerAccount});
+      assert.fail("Should not be able to remove zero address as minter.");
+    } catch (err) {
+      assert.equal("HEOToken: zero-address cannot be a minter.", err.reason);
+    }
+    try {
+      await heoTokenInstance.removeBurner("0x0000000000000000000000000000000000000000", {from: ownerAccount});
+      assert.fail("Should not be able to remove zero address as burner.");
+    } catch (err) {
+      assert.equal("HEOToken: zero-address cannot be a burner.", err.reason);
+    }
+    let isZeroMinter = await heoTokenInstance.isMinter.call("0x0000000000000000000000000000000000000000");
+    assert.isNotTrue(isZeroMinter, "Zero address should not be a minter");
+    let isZeroBurner = await heoTokenInstance.isBurner.call("0x0000000000000000000000000000000000000000");
+    assert.isNotTrue(isZeroBurner, "Zero address should not be a burner");
 
-    // Setup 2 accounts.
-    const accountOne = accounts[0];
-    const accountTwo = accounts[1];
+    try {
+      await heoTokenInstance.addMinter("0x87567B3c1a5B66f4F0432FfB428a93f238a9180d", {from: rogueAccount});
+      assert.fail("Non-owner should not be able to add minter.");
+    } catch (err) {
+      assert.equal("Ownable: caller is not the owner", err.reason, "Wrong error message: " + err.reason);
+    }
 
-    // Get initial balances of first and second account.
-    const accountOneStartingBalance = (await heoTokenInstance.balanceOf.call(accountOne)).toNumber();
-    const accountTwoStartingBalance = (await heoTokenInstance.balanceOf.call(accountTwo)).toNumber();
+    try {
+      await heoTokenInstance.removeMinter("0x87567B3c1a5B66f4F0432FfB428a93f238a9180d", {from: rogueAccount});
+      assert.fail("Non-owner should not be able to remove minter.");
+    } catch (err) {
+      assert.equal("Ownable: caller is not the owner", err.reason, "Wrong error message: " + err.reason);
+    }
+    try {
+      await heoTokenInstance.addBurner("0x87567B3c1a5B66f4F0432FfB428a93f238a9180d", {from: rogueAccount});
+      assert.fail("Non-owner should not be able to add burner.");
+    } catch (err) {
+      assert.equal("Ownable: caller is not the owner", err.reason, "Wrong error message: " + err.reason);
+    }
+    try {
+      await heoTokenInstance.removeBurner("0x87567B3c1a5B66f4F0432FfB428a93f238a9180d", {from: rogueAccount});
+      assert.fail("Non-owner should not be able to remove burner.");
+    } catch (err) {
+      assert.equal("Ownable: caller is not the owner", err.reason, "Wrong error message: " + err.reason);
+    }
+
+    await heoTokenInstance.addMinter("0x87567B3c1a5B66f4F0432FfB428a93f238a9180d", {from: ownerAccount});
+    var isMinter = await heoTokenInstance.isMinter.call("0x87567B3c1a5B66f4F0432FfB428a93f238a9180d");
+    assert.isTrue(isMinter, "Should have added a minter");
+
+    await heoTokenInstance.addBurner("0x87567B3c1a5B66f4F0432FfB428a93f238a9180d", {from: ownerAccount});
+    var isBurner = await heoTokenInstance.isBurner.call("0x87567B3c1a5B66f4F0432FfB428a93f238a9180d");
+    assert.isTrue(isBurner, "Should have added a burner");
+
+    await heoTokenInstance.removeMinter("0x87567B3c1a5B66f4F0432FfB428a93f238a9180d", {from: ownerAccount});
+    isMinter = await heoTokenInstance.isMinter.call("0x87567B3c1a5B66f4F0432FfB428a93f238a9180d");
+    assert.isNotTrue(isMinter, "Should have removed minter");
+
+    await heoTokenInstance.removeBurner("0x87567B3c1a5B66f4F0432FfB428a93f238a9180d", {from: ownerAccount});
+    isBurner = await heoTokenInstance.isBurner.call("0x87567B3c1a5B66f4F0432FfB428a93f238a9180d");
+    assert.isNotTrue(isBurner, "Should have removed burner");
+  })
+
+  it("should mint from multiple instances of HEOManualDistribution", async () => {
+    const heoTokenInstance = await HEOToken.deployed();
+    const privateSaleInstance = await HEOManualDistribution.new(85000, 0, "Private Sale", HEOToken.address);
+    const bountyInstance = await HEOManualDistribution.new(5000, 0, "Bounty", HEOToken.address);
+    const charityInstance = await HEOManualDistribution.new(10000, 0, "Charity", HEOToken.address);
+
+    const ownerAccount = accounts[0];
+    const investorAccount = accounts[1];
+    const hackerAccount = accounts[2];
+    const charityAccount = accounts[3];
+
+    await heoTokenInstance.addMinter(privateSaleInstance.address, {from: ownerAccount});
+    await heoTokenInstance.addMinter(bountyInstance.address, {from: ownerAccount});
+    await heoTokenInstance.addMinter(charityInstance.address, {from: ownerAccount});
+
+    //save balances before distribution
+    const investorBalanceBefore = (await heoTokenInstance.balanceOf.call(investorAccount)).toNumber();
+    const hackerBalanceBefore = (await heoTokenInstance.balanceOf.call(hackerAccount)).toNumber();
+    const charityBalanceBefore = (await heoTokenInstance.balanceOf.call(charityAccount)).toNumber();
+
+    //save distribution counters before distribution
+    const bountyDistributedBefore = (await bountyInstance.distributed.call()).toNumber();
+    const charityDistributedBefore = (await charityInstance.distributed.call()).toNumber();
+    const privateSaleSoldBefore = (await privateSaleInstance.distributed.call()).toNumber();
+
     const totalSupplyBefore = (await heoTokenInstance.totalSupply.call()).toNumber();
 
-    assert.equal(accountOneStartingBalance, 0, "Owner should have 0 HEO");
-    assert.equal(accountTwoStartingBalance, 0, "Investor should have 0 HEO before investing");
+    //make sure nothing has been minted yet
+    assert.equal(privateSaleSoldBefore, 0);
+    assert.equal(charityDistributedBefore, 0);
+    assert.equal(bountyDistributedBefore, 0);
 
-    // Make transaction from first account to second.
-    const amount = 10;
-    await heoTokenInstance.mintPrivate(accountTwo, amount, { from: accountOne });
+    assert.equal(investorBalanceBefore, 0);
+    assert.equal(hackerBalanceBefore, 0);
+    assert.equal(charityBalanceBefore, 0);
 
-    // Get balances of first and second account after the transactions.
-    const accountOneEndingBalance = (await heoTokenInstance.balanceOf.call(accountOne)).toNumber();
-    const accountTwoEndingBalance = (await heoTokenInstance.balanceOf.call(accountTwo)).toNumber();
+    assert.equal(totalSupplyBefore, 0);
 
-    assert.equal(accountOneEndingBalance, 0, "Owner should have 0 HEO");
-    assert.equal(accountTwoEndingBalance, amount, "Investor should have 10 HEO after investing");
+    //mint and distributie Private Sale, Charity, and Bounty tokens
+    const investorAmount = 100;
+    const charityAmount = 13;
+    const bountyAmount = 12;
+    const totalDistributed = investorAmount + charityAmount + bountyAmount;
+    await privateSaleInstance.distribute(investorAccount, investorAmount, { from: ownerAccount });
+    await charityInstance.distribute(charityAccount, charityAmount, { from: ownerAccount });
+    await bountyInstance.distribute(hackerAccount, bountyAmount, { from: ownerAccount });
 
-    const privateSaleSold = (await heoTokenInstance.privateSaleSold.call()).toNumber();
-    assert.equal(privateSaleSold, amount, "Expecting number of tokens sold on private sale to be 10");
+    //check balances after distributing
+    const investorBalanceAfter = (await heoTokenInstance.balanceOf.call(investorAccount)).toNumber();
+    const hackerBalanceAfter = (await heoTokenInstance.balanceOf.call(hackerAccount)).toNumber();
+    const charityBalanceAfter = (await heoTokenInstance.balanceOf.call(charityAccount)).toNumber();
 
-    var totalSupplyAfter = (await heoTokenInstance.totalSupply.call()).toNumber();
-    assert.equal(totalSupplyAfter, totalSupplyBefore+amount, "Expecting totalSupply to increase by 10");
-  });
+    //check distribution counters after distributing
+    const bountyDistributedAfter = (await bountyInstance.distributed.call()).toNumber();
+    const charityDistributedAfter = (await charityInstance.distributed.call()).toNumber();
+    const privateSaleSoldAfter = (await privateSaleInstance.distributed.call()).toNumber();
 
-  it('should mint HEO tokens via bounty', async () => {
-    const heoTokenInstance = await HEOToken.deployed();
+    const totalSupplyAfter = (await heoTokenInstance.totalSupply.call()).toNumber();
 
-    // Setup 2 accounts.
-    const accountOne = accounts[0];
-    const accountThree = accounts[2];
+    //make sure numbers add up
+    assert.equal(bountyDistributedAfter, bountyAmount, "Wrong number of distributed bounty tokens.");
+    assert.equal(charityDistributedAfter, charityAmount, "Wrong number of distributed charity tokens.");
+    assert.equal(privateSaleSoldAfter, investorAmount, "Wrong number of distributed investor tokens.");
 
-    // Get initial balances of first and second account.
-    const accountOneStartingBalance = (await heoTokenInstance.balanceOf.call(accountOne)).toNumber();
-    const accountThreeStartingBalance = (await heoTokenInstance.balanceOf.call(accountThree)).toNumber();
-    const totalSupplyBefore = (await heoTokenInstance.totalSupply.call()).toNumber();
-    const privateSaleSoldBefore = (await heoTokenInstance.privateSaleSold.call()).toNumber();
+    assert.equal(hackerBalanceAfter, bountyAmount, "Wrong balance of bounty tokens after distribution.");
+    assert.equal(charityBalanceAfter, charityAmount, "Wrong balance of charity tokens after distribution.");
+    assert.equal(investorBalanceAfter, investorAmount, "Wrong balance of investor tokens after distribution.");
 
-    assert.equal(accountOneStartingBalance, 0, "Owner should have 0 HEO");
-    assert.equal(accountThreeStartingBalance, 0, "Hacker should have 0 HEO before getting the bounty");
-
-    // Make transaction from first account to third.
-    const amount = 5;
-    await heoTokenInstance.mintBounty(accountThree, amount, { from: accountOne });
-
-    // Get balances of first and second account after the transactions.
-    const accountOneEndingBalance = (await heoTokenInstance.balanceOf.call(accountOne)).toNumber();
-    const accountThreeEndingBalance = (await heoTokenInstance.balanceOf.call(accountThree)).toNumber();
-
-    assert.equal(accountOneEndingBalance, 0, "Owner should have 0 HEO");
-    assert.equal(accountThreeEndingBalance, amount, "Hacker should have 5 HEO after getting the bounty");
-
-    const bountyDistributed = (await heoTokenInstance.bountyDistributed.call()).toNumber();
-    assert.equal(bountyDistributed, amount, "Expecting number of tokens distributed via bounty to be 5");
-
-    const privateSaleSoldAfter = (await heoTokenInstance.privateSaleSold.call()).toNumber();
-    assert.equal(privateSaleSoldAfter, privateSaleSoldBefore, "Expecting privateSaleSold to not change");
-
-    var totalSupplyAfter = (await heoTokenInstance.totalSupply.call()).toNumber();
-    assert.equal(totalSupplyAfter, totalSupplyBefore+amount, "Expecting totalSupply to increase by 5");
-  });
-
-  it("Should enforce token limits", async () => {
-    const heoTokenInstance = await HEOToken.deployed();
-    // Setup 2 accounts.
-    const accountOne = accounts[0];
-    const accountTwo = accounts[1];
-    const accountThree = accounts[2];
-    const accountFour = accounts[3];
-
-    //save values before failure
-    const accountOneBalanceBefore = (await heoTokenInstance.balanceOf.call(accountOne)).toNumber();
-    const accountTwoBalanceBefore = (await heoTokenInstance.balanceOf.call(accountTwo)).toNumber();
-    const accountThreeBalanceBefore = (await heoTokenInstance.balanceOf.call(accountThree)).toNumber();
-    const accountFourBalanceBefore = (await heoTokenInstance.balanceOf.call(accountFour)).toNumber();
-    const privateSaleSoldBefore = (await heoTokenInstance.privateSaleSold.call()).toNumber();
-    const bountyDistributedBefore = (await heoTokenInstance.bountyDistributed.call()).toNumber();
-    const charityDistributedBefore = (await heoTokenInstance.charityDistributed.call()).toNumber();
-    const totalSupplyBefore = (await heoTokenInstance.totalSupply.call()).toNumber();
-
-    // Try minting too many private sale tokens
-    var amount = 84999;
-    try {
-      await heoTokenInstance.mintPrivate(accountTwo, amount, { from: accountOne });
-      assert.fail("should fail to mint more tokens than allowed to private sale")
-    } catch (err) {
-      assert.equal("HEOToken: exceeded private sale limit", err.reason, err.reason);
-    }
-
-    // Try minting zero private sale tokens
-    amount = 0;
-    try {
-      await heoTokenInstance.mintPrivate(accountTwo, amount, { from: accountOne });
-      assert.fail("should fail to mint more tokens than allowed to private sale")
-    } catch (err) {
-      assert.equal("HEOToken: cannot sell 0 or less tokens", err.reason, err.reason);
-    }
-
-    // Try minting negative private sale tokens
-    amount = -1;
-    try {
-      await heoTokenInstance.mintPrivate(accountTwo, amount, { from: accountOne });
-      assert.fail("should fail to mint more tokens than allowed to private sale")
-    } catch (err) {
-      assert.equal("value out-of-bounds", err.reason, err.reason);
-    }
-
-    const accountOneBalanceAfter = (await heoTokenInstance.balanceOf.call(accountOne)).toNumber();
-    const accountTwoBalanceAfter = (await heoTokenInstance.balanceOf.call(accountTwo)).toNumber();
-    assert.equal(accountOneBalanceAfter, accountOneBalanceBefore, "Owner's balance should not change after failure");
-    assert.equal(accountTwoBalanceAfter, accountTwoBalanceBefore, "Investor's balance should not change after failure");
-    const privateSaleSoldAfter = (await heoTokenInstance.privateSaleSold.call()).toNumber();
-    assert.equal(privateSaleSoldBefore, privateSaleSoldAfter, "Expecting number of tokens sold on private sale to not change after failure");
-    var totalSupplyAfter = (await heoTokenInstance.totalSupply.call()).toNumber();
-    assert.equal(totalSupplyAfter, totalSupplyBefore, "Expecting totalSupply to not change after failure");
-
-    // Try minting too many bounty tokens
-    amount = 5998;
-    try {
-      await heoTokenInstance.mintBounty(accountThree, amount, { from: accountOne });
-      assert.fail("should fail to mint more tokens than allowed for bounty")
-    } catch (err) {
-      assert.equal("HEOToken: exceeded total bounty limit", err.reason, err.reason);
-    }
-
-    // Try minting zero bounty tokens
-    amount = 0;
-    try {
-      await heoTokenInstance.mintBounty(accountThree, amount, { from: accountOne });
-      assert.fail("should fail to mint zero tokens for bounty")
-    } catch (err) {
-      assert.equal("HEOToken: cannot distribute 0 or less tokens", err.reason, err.reason);
-    }
-
-    // Try minting negative bounty tokens
-    amount = -1;
-    try {
-      await heoTokenInstance.mintBounty(accountThree, amount, { from: accountOne });
-      assert.fail("should fail to mint negative tokens for bounty")
-    } catch (err) {
-      assert.equal("value out-of-bounds", err.reason, err.reason);
-    }
-
-    const bountyDistributedAfter = (await heoTokenInstance.bountyDistributed.call()).toNumber();
-    assert.equal(bountyDistributedBefore, bountyDistributedAfter, "Expecting number of tokens distributed as bounties to not change after failure");
-    const accountThreeBalanceAfter = (await heoTokenInstance.balanceOf.call(accountThree)).toNumber();
-    assert.equal(accountThreeBalanceAfter, accountThreeBalanceBefore, "Hacker's balance should not change after failure");
-    totalSupplyAfter = (await heoTokenInstance.totalSupply.call()).toNumber();
-    assert.equal(totalSupplyAfter, totalSupplyBefore, "Expecting totalSupply to not change after failure");
-
-    // Try minting too many charity tokens
-    amount = 10101;
-    try {
-      await heoTokenInstance.mintCharity(accountFour, amount, { from: accountOne });
-      assert.fail("should fail to mint more tokens than allowed for charity")
-    } catch (err) {
-      assert.equal("HEOToken: exceeded total charity limit", err.reason, err.reason);
-    }
-
-    // Try minting zero charity tokens
-    amount = 0;
-    try {
-      await heoTokenInstance.mintCharity(accountFour, amount, { from: accountOne });
-      assert.fail("should fail to mint zero tokens for charity")
-    } catch (err) {
-      assert.equal("HEOToken: cannot distribute 0 or less tokens", err.reason, err.reason);
-    }
-
-    // Try minting negative charity tokens
-    amount = -1;
-    try {
-      await heoTokenInstance.mintCharity(accountFour, amount, { from: accountOne });
-      assert.fail("should fail to mint negative tokens for charity")
-    } catch (err) {
-      assert.equal("value out-of-bounds", err.reason, err.reason);
-    }
-
-    const charityDistributedAfter = (await heoTokenInstance.charityDistributed.call()).toNumber();
-    assert.equal(charityDistributedBefore, charityDistributedAfter, "Expecting number of tokens distributed to charity to not change after failure");
-    const accountFourBalanceAfter = (await heoTokenInstance.balanceOf.call(accountFour)).toNumber();
-    assert.equal(accountFourBalanceAfter, accountFourBalanceBefore, "Charity's balance should not change after failure");
-    totalSupplyAfter = (await heoTokenInstance.totalSupply.call()).toNumber();
-    assert.equal(totalSupplyAfter, totalSupplyBefore, "Expecting totalSupply to not change after failure");
-  });
-
-  it('should mint HEO tokens to charity', async () => {
-    const heoTokenInstance = await HEOToken.deployed();
-
-    // Setup 2 accounts.
-    const accountOne = accounts[0];
-    const accountFour = accounts[3];
-
-    // Get initial balances of first and second account.
-    const accountOneStartingBalance = (await heoTokenInstance.balanceOf.call(accountOne)).toNumber();
-    const accountFourStartingBalance = (await heoTokenInstance.balanceOf.call(accountFour)).toNumber();
-    const totalSupplyBefore = (await heoTokenInstance.totalSupply.call()).toNumber();
-
-    assert.equal(accountOneStartingBalance, 0, "Owner should have 0 HEO");
-    assert.equal(accountFourStartingBalance, 0, "Charity should have 0 HEO before getting the distribution");
-
-    // Make transaction from first account to third.
-    const amount = 20;
-    await heoTokenInstance.mintCharity(accountFour, amount, { from: accountOne });
-
-    // Get balances of first and second account after the transactions.
-    const accountOneEndingBalance = (await heoTokenInstance.balanceOf.call(accountOne)).toNumber();
-    const accountFourEndingBalance = (await heoTokenInstance.balanceOf.call(accountFour)).toNumber();
-
-    assert.equal(accountOneEndingBalance, 0, "Owner should have 0 HEO");
-    assert.equal(accountFourEndingBalance, amount, "Charity should have 20 HEO after getting the distribution");
-
-    const charityDistributed = (await heoTokenInstance.charityDistributed.call()).toNumber();
-    assert.equal(charityDistributed, amount, "Expecting number of tokens distributed to charity to be 20");
-
-    var totalSupplyAfter = (await heoTokenInstance.totalSupply.call()).toNumber();
-    assert.equal(totalSupplyAfter, totalSupplyBefore+amount, "Expecting totalSupply to increase by 20");
+    assert.equal(totalSupplyAfter, totalDistributed, "Wrong total supply after distribution.");
   });
 });
