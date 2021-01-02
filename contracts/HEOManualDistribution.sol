@@ -5,7 +5,7 @@
  * Proprietary and confidential
  * Written by Greg Solovyev <fiddlestring@gmail.com>, 2020
  */
-pragma solidity >=0.6.1 <0.7.0;
+pragma solidity >=0.6.1;
 
 import "openzeppelin-solidity/contracts/access/Ownable.sol";
 import "openzeppelin-solidity/contracts/token/ERC20/IERC20.sol";

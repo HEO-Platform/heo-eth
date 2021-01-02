@@ -1,10 +1,13 @@
-pragma solidity >=0.6.1 <0.7.0;
+pragma solidity >=0.6.1;
 
 import "openzeppelin-solidity/contracts/access/Ownable.sol";
 import "./IHEOCampaignFactory.sol";
 import "./IHEOCampaign.sol";
 import "./IHEOCampaignRegistry.sol";
 
+/**
+* This contract acts as storage for campaigns.
+**/
 contract HEOCampaignRegistry is IHEOCampaignRegistry, Ownable {
     /**
     * Maps owners do their campaigns
@@ -20,6 +23,13 @@ contract HEOCampaignRegistry is IHEOCampaignRegistry, Ownable {
     IHEOCampaignFactory private _factory;
 
     /**
+    * Constructor sets the address of IHEOCampaignFactory contract
+    * that is authorized to register campaigns in this storage.
+    */
+    constructor (IHEOCampaignFactory factory) public {
+        _factory = factory;
+    }
+    /**
     * Override default Ownable::renounceOwnership to make sure
     * this contract does not get orphaned.
     */
@@ -27,6 +37,10 @@ contract HEOCampaignRegistry is IHEOCampaignRegistry, Ownable {
         revert("HEOCampaignRegistry: Cannot renounce ownership");
     }
 
+    /**
+    * Instance of IHEOCampaignFactory that is authorized to store
+    * campaigns in this contract.
+    */
     function getFactory() public view returns (IHEOCampaignFactory) {
         return _factory;
     }
@@ -35,8 +49,10 @@ contract HEOCampaignRegistry is IHEOCampaignRegistry, Ownable {
         _factory = factory;
     }
 
-    function registerCampaign(address beneficiary, IHEOCampaign campaign) external override {
-        _ownersToCampaigns[beneficiary].push(campaign);
-        _campaignsToOwners[address(campaign)] = beneficiary;
+    function registerCampaign(IHEOCampaign campaign) external override {
+        require(address(_factory) != address(0), "HEOCampaignRegistry: authorized instance of IHEOCampaignFactory is not set.");
+        require(address(_factory) == _msgSender(), "HEOCampaignRegistry: caller must be the authorized instance of IHEOCampaignFactory.");
+        _ownersToCampaigns[campaign.beneficiary()].push(campaign);
+        _campaignsToOwners[address(campaign)] = campaign.beneficiary();
     }
 }

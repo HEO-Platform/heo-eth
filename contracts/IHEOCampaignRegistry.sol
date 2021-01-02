@@ -1,7 +1,7 @@
-pragma solidity >=0.6.1 <0.7.0;
+pragma solidity >=0.6.1;
 
 import "./IHEOCampaign.sol";
 
 interface IHEOCampaignRegistry {
-    function registerCampaign(address beneficiary, IHEOCampaign campaign) external;
+    function registerCampaign(IHEOCampaign campaign) external;
 }
