@@ -38,10 +38,12 @@ contract HEOCampaignFactory is IHEOCampaignFactory, Ownable {
     */
     function createCampaign(uint256 maxAmount, uint256 heoToBurn, address token) public {
         require(heoToBurn > 0, "HEOCampaignFactory: cannot create a campaign without burning HEO tokens");
-
+        uint256 x = _globalParams.profitabilityCoefficient();
+        uint256 fee = _globalParams.serviceFee();
+        uint256 price = _priceOracle.getPrice(token);
         _heoToken.burn(_msgSender(), heoToBurn);
-        _registry.registerCampaign(new HEOCampaign(maxAmount, _msgSender(), _globalParams.profitabilityCoefficient(),
-            heoToBurn, _priceOracle.getPrice(token), _globalParams.serviceFee()));
+        uint8 decimals = _heoToken.decimals();
+        _registry.registerCampaign(new HEOCampaign(maxAmount, _msgSender(), x, heoToBurn, price, decimals, fee));
     }
 
     /**

@@ -28,7 +28,7 @@ contract HEOToken is ERC20, Ownable {
 	event BurnerRemoved(address indexed oldBurner);
 
 	constructor() public ERC20("Help Each Other platform token", "HEO") {
-		_maxSupply = 30000000;
+		_maxSupply = 30000000000000000000000000;
 	}
 
 	/*
@@ -44,7 +44,7 @@ contract HEOToken is ERC20, Ownable {
 			require(_minters[_msgSender()], "HEOToken: caller must be a minter contract.");
 		}
 		if(to == address(0)) {
-			require(totalSupply() - amount > 0, "HEOToken: this transaction will make _totalSupply negative.");
+			require(totalSupply() - amount >= 0, "HEOToken: this transaction will make _totalSupply negative.");
 			require(_burners[_msgSender()], "HEOToken: caller must be a burner contract.");
 		}
 	}

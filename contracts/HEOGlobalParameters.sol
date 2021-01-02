@@ -4,8 +4,9 @@ contract HEOGlobalParameters is Ownable {
     uint256 private _serviceFee;
     uint256 private _profitabilityCoefficient; //X
 
-    constructor() public {
-
+    constructor(uint256 serviceFee, uint256 profitabilityCoefficient) public {
+        _serviceFee = serviceFee;
+        _profitabilityCoefficient = profitabilityCoefficient;
     }
 
     function setServiceFee (uint256 serviceFee) external onlyOwner {

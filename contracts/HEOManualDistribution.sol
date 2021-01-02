@@ -17,8 +17,8 @@ contract HEOManualDistribution is Ownable, ReentrancyGuard {
     using SafeMath for uint256;
     HEOToken private _token;
     string _name;
-    uint256 private _limit; //Amount of HEO tokens to be distributed
-    uint256 private _distributed; //Amount of HEO tokens already distributed
+    uint256 private _limit; //Amount of HEO tokens (in tknBits) to be distributed
+    uint256 private _distributed; //Amount of HEO (in tknBits) tokens already distributed
 
     constructor (uint256 limit, uint256 distributed, string memory name, HEOToken token) public {
         _limit = limit;

@@ -12,7 +12,7 @@ contract HEOCampaignRegistry is IHEOCampaignRegistry, Ownable {
     /**
     * Maps owners do their campaigns
     */
-    mapping(address => IHEOCampaign[]) private _ownersToCampaigns;
+    mapping(address => address[]) private _ownersToCampaigns;
 
     /**
     * Reverse map of campaigns to owners
@@ -22,12 +22,7 @@ contract HEOCampaignRegistry is IHEOCampaignRegistry, Ownable {
     //use interface, so that we can replace the factory contract
     IHEOCampaignFactory private _factory;
 
-    /**
-    * Constructor sets the address of IHEOCampaignFactory contract
-    * that is authorized to register campaigns in this storage.
-    */
-    constructor (IHEOCampaignFactory factory) public {
-        _factory = factory;
+    constructor () public {
     }
     /**
     * Override default Ownable::renounceOwnership to make sure
@@ -52,7 +47,11 @@ contract HEOCampaignRegistry is IHEOCampaignRegistry, Ownable {
     function registerCampaign(IHEOCampaign campaign) external override {
         require(address(_factory) != address(0), "HEOCampaignRegistry: authorized instance of IHEOCampaignFactory is not set.");
         require(address(_factory) == _msgSender(), "HEOCampaignRegistry: caller must be the authorized instance of IHEOCampaignFactory.");
-        _ownersToCampaigns[campaign.beneficiary()].push(campaign);
+        _ownersToCampaigns[campaign.beneficiary()].push(address(campaign));
         _campaignsToOwners[address(campaign)] = campaign.beneficiary();
+    }
+
+    function getMyCampaigns() public view returns (address[] memory) {
+        return _ownersToCampaigns[_msgSender()];
     }
 }
