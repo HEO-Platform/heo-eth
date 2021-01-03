@@ -16,6 +16,7 @@ contract HEOCampaign is IHEOCampaign, Ownable {
     uint256 private _raisedFunds; //how many wei/wad/tknBits of the target crypto asset this campaign has raised
     uint256 private _heoPrice; //price of 1 HEO in wei/wad/tknBits of the target crypto asset
     uint8 private _heoDecimals;
+    uint8 private _donationYieldDecimals = 5;
     bool private _active;
 
     /**
@@ -60,7 +61,7 @@ contract HEOCampaign is IHEOCampaign, Ownable {
     * Donation Yield (Y) based on formula Y = X/Z
     */
     function donationYield() external view override returns (uint256) {
-        return _profitabilityCoefficient.div(_maxAmount.div(_burntHeo.div(uint256(10)**uint256(_heoDecimals))).div(_heoPrice));
+        return _profitabilityCoefficient.mul(uint256(10)**uint256(_donationYieldDecimals)).div(getZ());
     }
 
     /**
@@ -74,8 +75,8 @@ contract HEOCampaign is IHEOCampaign, Ownable {
     * Campaign fundraising ROI. Value of crypto raised by the campaign divided
     * by value of HEO burnt to activate the campaign.
     */
-    function getZ() external view override returns (uint256) {
-        return _maxAmount.div(_burntHeo.div(uint256(10)**uint256(_heoDecimals))).div(_heoPrice);
+    function getZ() public view returns (uint256) {
+        return _maxAmount.mul(uint256(10)**uint256(_heoDecimals)).div(_burntHeo).div(_heoPrice);
     }
 
     /**
@@ -101,5 +102,9 @@ contract HEOCampaign is IHEOCampaign, Ownable {
 
     function burntHeo() external view override returns (uint256) {
         return _burntHeo;
+    }
+
+    function donationYieldDecimals() external view override returns (uint256) {
+        return _donationYieldDecimals;
     }
 }

@@ -14,6 +14,7 @@ contract HEOCampaignFactory is IHEOCampaignFactory, Ownable {
     HEOGlobalParameters private _globalParams;
     HEOPriceOracle private _priceOracle;
 
+    event CampaignDeployed(address indexed campaignAddress);
     /**
     * {registry} is the storage contract that holds maps of
     * campaigns and owners.
@@ -37,13 +38,18 @@ contract HEOCampaignFactory is IHEOCampaignFactory, Ownable {
     * To do that this factory has to be registered in HEOToken._burners map.
     */
     function createCampaign(uint256 maxAmount, uint256 heoToBurn, address token) public {
-        require(heoToBurn > 0, "HEOCampaignFactory: cannot create a campaign without burning HEO tokens");
+        require(heoToBurn > 0, "HEOCampaignFactory: cannot create a campaign without burning HEO tokens.");
+        uint256 price = _priceOracle.getPrice(token);
+        require(price > 0, "HEOCampaignFactory: currency at given address is not supported.");
         uint256 x = _globalParams.profitabilityCoefficient();
         uint256 fee = _globalParams.serviceFee();
-        uint256 price = _priceOracle.getPrice(token);
-        _heoToken.burn(_msgSender(), heoToBurn);
         uint8 decimals = _heoToken.decimals();
-        _registry.registerCampaign(new HEOCampaign(maxAmount, _msgSender(), x, heoToBurn, price, decimals, fee));
+
+        //Burn HEO tokens before creating the campaign
+        _heoToken.burn(_msgSender(), heoToBurn);
+        HEOCampaign campaign = new HEOCampaign(maxAmount, _msgSender(), x, heoToBurn, price, decimals, fee);
+        _registry.registerCampaign(campaign);
+        emit CampaignDeployed(address(campaign));
     }
 
     /**
