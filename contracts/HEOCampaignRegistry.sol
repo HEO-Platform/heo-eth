@@ -54,4 +54,8 @@ contract HEOCampaignRegistry is IHEOCampaignRegistry, Ownable {
     function getMyCampaigns() public view returns (address[] memory) {
         return _ownersToCampaigns[_msgSender()];
     }
+
+    function getOwner(IHEOCampaign campaign) external view override returns (address) {
+        return _campaignsToOwners[address(campaign)];
+    }
 }

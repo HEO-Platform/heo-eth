@@ -53,11 +53,24 @@ contract HEOCampaignFactory is IHEOCampaignFactory, Ownable {
     }
 
     /**
+    * Beneficiary can increase Donation Yield (Y) bu burning more HEO tokens.
+    */
+    function increaseYield(HEOCampaign campaign, uint256 heoToBurn) public {
+        require(heoToBurn > 0, "HEOCampaignFactory: cannot increase yield by burning zero tokens.");
+        require(address(campaign) != address(0), "HEOCampaignFactory: campaign cannot be zero-address.");
+        require(campaign.beneficiary() == _msgSender(), "HEOCampaignFactory: only beneficiary can increase campaign yield.");
+        address registeredOwner = _registry.getOwner(campaign);
+        require(registeredOwner != address(0), "HEOCampaignFactory: campaign is not registered.");
+        _heoToken.burn(_msgSender(), heoToBurn);
+        campaign.increaseYield(heoToBurn);
+    }
+
+    /**
     * Override default Ownable::renounceOwnership to make sure
     * this contract does not get orphaned.
     */
     function renounceOwnership() public override {
-        revert("HEOCampaignFactory: Cannot renounce ownership");
+        revert("HEOCampaignFactory: Cannot renounce ownership.");
     }
 
     function setRegistry(IHEOCampaignRegistry registry) external {

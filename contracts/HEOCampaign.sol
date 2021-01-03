@@ -1,7 +1,6 @@
 pragma solidity >=0.6.1;
 
 import "./IHEOCampaign.sol";
-import "./HEOToken.sol";
 import "openzeppelin-solidity/contracts/access/Ownable.sol";
 import "openzeppelin-solidity/contracts/math/SafeMath.sol";
 
@@ -26,10 +25,10 @@ contract HEOCampaign is IHEOCampaign, Ownable {
     */
     constructor (uint256 maxAmount, address beneficiary, uint256 profitabilityCoefficient,
         uint256 burntHeo, uint256 heoPrice, uint8 heoDecimals, uint256 serviceFee) public {
-        require(beneficiary != address(0), "HEOCampaign: beneficiary cannot be a zero address");
-        require(maxAmount > 0, "HEOCampaign: _maxAmount cannot be 0");
-        require(burntHeo > 0, "HEOCampaign: _burntHeo cannot be 0");
-        require(heoPrice > 0, "HEOCampaign: HEO price cannot be 0");
+        require(beneficiary != address(0), "HEOCampaign: beneficiary cannot be a zero address.");
+        require(maxAmount > 0, "HEOCampaign: _maxAmount cannot be 0.");
+        require(burntHeo > 0, "HEOCampaign: _burntHeo cannot be 0.");
+        require(heoPrice > 0, "HEOCampaign: HEO price cannot be 0.");
 
         _maxAmount = maxAmount;
         _beneficiary = beneficiary;
@@ -38,6 +37,15 @@ contract HEOCampaign is IHEOCampaign, Ownable {
         _burntHeo = burntHeo;
         _heoDecimals = heoDecimals;
         _profitabilityCoefficient = profitabilityCoefficient;
+        _active = true;
+    }
+
+    /**
+    * Donate to the campaign in native tokens (ETH).
+    */
+    function donateNative() public payable {
+        require(msg.value > 0);
+
     }
 
     /**
@@ -45,7 +53,8 @@ contract HEOCampaign is IHEOCampaign, Ownable {
     * for donors. Doing so automatically lowers Z (inverse fundraising cost)
     */
     function increaseYield(uint256 burntHeo) public onlyOwner {
-        require(burntHeo > 0, "HEOCampaign: burntHeo cannot be 0");
+        require(burntHeo > 0, "HEOCampaign: burntHeo cannot be 0.");
+        require(_active, "HEOCampaign: campaign is not active.");
         _burntHeo = _burntHeo.add(burntHeo);
     }
     //getters
