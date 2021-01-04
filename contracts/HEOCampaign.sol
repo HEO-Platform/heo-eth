@@ -3,6 +3,10 @@ pragma solidity >=0.6.1;
 import "./IHEOCampaign.sol";
 import "openzeppelin-solidity/contracts/access/Ownable.sol";
 import "openzeppelin-solidity/contracts/math/SafeMath.sol";
+import "./HEOPriceOracle.sol";
+import "./HEOCampaignFactory.sol";
+import "./HEOGlobalParameters.sol";
+import "./HEOToken.sol";
 
 contract HEOCampaign is IHEOCampaign, Ownable {
     using SafeMath for uint256;
@@ -14,9 +18,7 @@ contract HEOCampaign is IHEOCampaign, Ownable {
     uint256 private _burntHeo; //amount of burnt HEO in tknBits
     uint256 private _raisedFunds; //how many wei/wad/tknBits of the target crypto asset this campaign has raised
     uint256 private _heoPrice; //price of 1 HEO in wei/wad/tknBits of the target crypto asset
-    uint8 private _heoDecimals;
-    uint8 private _donationYieldDecimals = 5;
-    bool private _active;
+    bool private _isNative;
 
     /**
     * Fundraising ROI (Z) is set by burning beneficiary's HEO tokens.
@@ -24,7 +26,7 @@ contract HEOCampaign is IHEOCampaign, Ownable {
     * Owner of the campaign is the instance of HEOCampaignFactory
     */
     constructor (uint256 maxAmount, address beneficiary, uint256 profitabilityCoefficient,
-        uint256 burntHeo, uint256 heoPrice, uint8 heoDecimals, uint256 serviceFee) public {
+        uint256 burntHeo, uint256 heoPrice, uint256 serviceFee) public {
         require(beneficiary != address(0), "HEOCampaign: beneficiary cannot be a zero address.");
         require(maxAmount > 0, "HEOCampaign: _maxAmount cannot be 0.");
         require(burntHeo > 0, "HEOCampaign: _burntHeo cannot be 0.");
@@ -35,17 +37,19 @@ contract HEOCampaign is IHEOCampaign, Ownable {
         _serviceFee = serviceFee;
         _heoPrice = heoPrice;
         _burntHeo = burntHeo;
-        _heoDecimals = heoDecimals;
         _profitabilityCoefficient = profitabilityCoefficient;
-        _active = true;
+        _isNative = false;
     }
 
     /**
     * Donate to the campaign in native tokens (ETH).
     */
     function donateNative() public payable {
-        require(msg.value > 0);
-
+        require(_isNative, "HEOCampaign: this campaign does not accept ETH.");
+        require(msg.value > 0, "HEOCampaign: must send non-zero amount of ETH.");
+        uint256 raisedFunds = _raisedFunds.add(msg.value);
+        require(raisedFunds <= _maxAmount, "HEOCampaign: this contribution will exceed maximum allowed for this campaign.");
+        _raisedFunds = raisedFunds;
     }
 
     /**
@@ -54,7 +58,7 @@ contract HEOCampaign is IHEOCampaign, Ownable {
     */
     function increaseYield(uint256 burntHeo) public onlyOwner {
         require(burntHeo > 0, "HEOCampaign: burntHeo cannot be 0.");
-        require(_active, "HEOCampaign: campaign is not active.");
+        require(_raisedFunds < _maxAmount, "HEOCampaign: campaign is not active.");
         _burntHeo = _burntHeo.add(burntHeo);
     }
     //getters
@@ -70,7 +74,8 @@ contract HEOCampaign is IHEOCampaign, Ownable {
     * Donation Yield (Y) based on formula Y = X/Z
     */
     function donationYield() external view override returns (uint256) {
-        return _profitabilityCoefficient.mul(uint256(10)**uint256(_donationYieldDecimals)).div(getZ());
+        uint8 decimals = HEOGlobalParameters(HEOCampaignFactory(owner()).globalParams()).yDecimals();
+        return _profitabilityCoefficient.mul(uint256(10)**uint256(decimals)).div(getZ());
     }
 
     /**
@@ -85,7 +90,8 @@ contract HEOCampaign is IHEOCampaign, Ownable {
     * by value of HEO burnt to activate the campaign.
     */
     function getZ() public view returns (uint256) {
-        return _maxAmount.mul(uint256(10)**uint256(_heoDecimals)).div(_burntHeo).div(_heoPrice);
+        uint8 decimals = HEOToken(HEOCampaignFactory(owner()).heoToken()).decimals();
+        return _maxAmount.mul(uint256(10)**uint256(decimals)).div(_burntHeo).div(_heoPrice);
     }
 
     /**
@@ -102,7 +108,7 @@ contract HEOCampaign is IHEOCampaign, Ownable {
     }
 
     function isActive() external view override returns (bool) {
-        return _active;
+        return (_raisedFunds < _maxAmount);
     }
 
     function beneficiary() external view override returns (address) {
@@ -111,9 +117,5 @@ contract HEOCampaign is IHEOCampaign, Ownable {
 
     function burntHeo() external view override returns (uint256) {
         return _burntHeo;
-    }
-
-    function donationYieldDecimals() external view override returns (uint256) {
-        return _donationYieldDecimals;
     }
 }

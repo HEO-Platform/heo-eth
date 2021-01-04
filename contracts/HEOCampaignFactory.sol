@@ -43,11 +43,10 @@ contract HEOCampaignFactory is IHEOCampaignFactory, Ownable {
         require(price > 0, "HEOCampaignFactory: currency at given address is not supported.");
         uint256 x = _globalParams.profitabilityCoefficient();
         uint256 fee = _globalParams.serviceFee();
-        uint8 decimals = _heoToken.decimals();
 
         //Burn HEO tokens before creating the campaign
         _heoToken.burn(_msgSender(), heoToBurn);
-        HEOCampaign campaign = new HEOCampaign(maxAmount, _msgSender(), x, heoToBurn, price, decimals, fee);
+        HEOCampaign campaign = new HEOCampaign(maxAmount, _msgSender(), x, heoToBurn, price, fee);
         _registry.registerCampaign(campaign);
         emit CampaignDeployed(address(campaign));
     }
@@ -75,5 +74,17 @@ contract HEOCampaignFactory is IHEOCampaignFactory, Ownable {
 
     function setRegistry(IHEOCampaignRegistry registry) external {
         _registry = registry;
+    }
+
+    function priceOracle() public view returns (address) {
+        return address(_priceOracle);
+    }
+
+    function heoToken() public view returns(address) {
+        return address(_heoToken);
+    }
+
+    function globalParams() public view returns (address) {
+        return address(_globalParams);
     }
 }

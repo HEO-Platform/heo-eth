@@ -13,7 +13,7 @@ contract("HEOCampaignFactory", (accounts) => {
         //deploy contracts and set initial values
         iRegistry = await HEOCampaignRegistry.deployed();
         iToken = await HEOToken.deployed();
-        iGlobalParams = await HEOGlobalParameters.new(0, 20);
+        iGlobalParams = await HEOGlobalParameters.new(0, 20, 5);
         iPriceOracle = await HEOPriceOracle.new();
         iDistribution = await HEOManualDistribution.deployed();
         await iPriceOracle.setPrice("0x0000000000000000000000000000000000000000", web3.utils.toWei("1", "ether"));
@@ -51,7 +51,6 @@ contract("HEOCampaignFactory", (accounts) => {
         assert.isTrue(new BN(x).eq(new BN("20")), "Expecting X = 20, but found " + x);
         var z = await lastCampaign.getZ.call();
         var decimals = await iToken.decimals.call();
-        var yieldDecimals = await lastCampaign.donationYieldDecimals.call();
         var expectedZ = maxAmount.mul(new BN("10").pow(decimals)).div(burntHeo).div(heoPrice);
         assert.isTrue(z.eq(expectedZ), "Expecting Z to be " + expectedZ.toString() + ", but got " + z.toString());
         var y = await lastCampaign.donationYield.call();
@@ -147,7 +146,7 @@ contract("HEOCampaignFactory", (accounts) => {
         var x = await lastCampaign.profitabilityCoefficient.call();
         assert.isTrue(new BN(x).eq(new BN("20")), "Expecting X = 20, but found " + x);
         var decimals = await iToken.decimals.call();
-        var yieldDecimals = await lastCampaign.donationYieldDecimals.call();
+        var yieldDecimals = await iGlobalParams.yDecimals.call();
         assert.equal(decimals, 18, "Expecting 18 decimals in HEOToken.");
         var expectedZ = maxAmount.mul(new BN("10").pow(decimals)).div(burntHeo).div(heoPrice);
         var z = await lastCampaign.getZ.call();
@@ -195,7 +194,7 @@ contract("HEOCampaignFactory", (accounts) => {
         var x = await lastCampaign.profitabilityCoefficient.call();
         assert.isTrue(new BN(x).eq(new BN("20")), "Expecting X = 20, but found " + x);
         var decimals = await iToken.decimals.call();
-        var yieldDecimals = await lastCampaign.donationYieldDecimals.call();
+        var yieldDecimals = await iGlobalParams.yDecimals.call();
         assert.equal(decimals, 18, "Expecting 18 decimals in HEOToken.");
         var expectedZ = maxAmount.mul(new BN("10").pow(decimals)).div(burntHeo).div(heoPrice);
         var z = await lastCampaign.getZ.call();
@@ -250,7 +249,7 @@ contract("HEOCampaignFactory", (accounts) => {
             assert.equal(err.reason, "HEOCampaignFactory: only beneficiary can increase campaign yield.");
             let balanceAfter = await iToken.balanceOf.call(friendAccount);
             assert.isTrue(balanceAfter.eq(new BN(web3.utils.toWei("300"))),
-                "Balance of friendAccount should not have changed after failed traisaction")
+                "Balance of friendAccount should not have changed after failed traisaction");
         }
 
         //Try increasing yield with 0 HEO
@@ -262,7 +261,7 @@ contract("HEOCampaignFactory", (accounts) => {
             assert.equal(err.reason, "HEOCampaignFactory: cannot increase yield by burning zero tokens.");
             let balanceAfter = await iToken.balanceOf.call(charityAccount);
             assert.isTrue(balanceAfter.eq(new BN(web3.utils.toWei("700"))),
-                "Balance of charityAccount should not have changed after failed traisaction")
+                "Balance of charityAccount should not have changed after failed traisaction");
         }
 
         //Try increasing yield with 0-address
@@ -274,25 +273,25 @@ contract("HEOCampaignFactory", (accounts) => {
             assert.equal(err.reason, "HEOCampaignFactory: campaign cannot be zero-address.");
             let balanceAfter = await iToken.balanceOf.call(charityAccount);
             assert.isTrue(balanceAfter.eq(new BN(web3.utils.toWei("700"))),
-                "Balance of charityAccount should not have changed after failed traisaction")
+                "Balance of charityAccount should not have changed after failed traisaction");
         }
 
         //Try increasing yield with unregistered campaign address
         try {
             let rogueCampaign = await HEOCampaign.new(web3.utils.toWei("100"), charityAccount, 20,
-                web3.utils.toWei("1"), web3.utils.toWei("1"), 18, 0);
+                web3.utils.toWei("1"), web3.utils.toWei("1"), 0);
             assert.isNotNull(rogueCampaign, "Rogue campaign should be deployed");
             assert.isNotNull(rogueCampaign.address, "Rogue campaign should have an address");
             let beneficiary = await rogueCampaign.beneficiary.call();
             assert.equal(beneficiary, charityAccount, "Expecting charityAccount to be the beneficiary");
             await iCampaignFactory.increaseYield(rogueCampaign.address, web3.utils.toWei("500"),
                 {from: charityAccount});
-            assert.fail("Should throw an exception when passing non-campaign address as campaign argument");
+            assert.fail("Should throw an exception when passing unregistered address as campaign argument");
         } catch (err) {
-            assert.equal(err.reason, "HEOCampaignFactory: campaign is not registered.");
+            assert.equal(err.reason, "HEOCampaignFactory: campaign is not registered.", err);
             let balanceAfter = await iToken.balanceOf.call(charityAccount);
             assert.isTrue(balanceAfter.eq(new BN(web3.utils.toWei("700"))),
-                "Balance of charityAccount should not have changed after failed traisaction")
+                "Balance of charityAccount should not have changed after failed traisaction");
         }
 
         //Try increasing yield with non-campaign address
@@ -303,7 +302,7 @@ contract("HEOCampaignFactory", (accounts) => {
         } catch (err) {
             let balanceAfter = await iToken.balanceOf.call(charityAccount);
             assert.isTrue(balanceAfter.eq(new BN(web3.utils.toWei("700"))),
-                "Balance of charityAccount should not have changed after failed traisaction")
+                "Balance of charityAccount should not have changed after failed traisaction");
         }
 
         var newY = await lastCampaign.donationYield.call();
