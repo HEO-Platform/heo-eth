@@ -13,8 +13,8 @@ contract("HEOCampaignFactory", (accounts) => {
         //deploy contracts and set initial values
         iRegistry = await HEOCampaignRegistry.deployed();
         iToken = await HEOToken.deployed();
-        iGlobalParams = await HEOGlobalParameters.new(0, 20, 5);
-        iPriceOracle = await HEOPriceOracle.new();
+        iGlobalParams = await HEOGlobalParameters.deployed();
+        iPriceOracle = await HEOPriceOracle.deployed();
         iDistribution = await HEOManualDistribution.deployed();
         await iPriceOracle.setPrice("0x0000000000000000000000000000000000000000", web3.utils.toWei("1", "ether"));
         iCampaignFactory = await HEOCampaignFactory.new(iRegistry.address, iToken.address,

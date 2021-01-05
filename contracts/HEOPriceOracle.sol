@@ -1,9 +1,19 @@
 pragma solidity >=0.6.1;
 import "openzeppelin-solidity/contracts/access/Ownable.sol";
+import "openzeppelin-solidity/contracts/math/SafeMath.sol";
+import "./HEOGlobalParameters.sol";
 contract HEOPriceOracle is Ownable {
-    mapping (address => uint256) private priceMap;
-    constructor() public {
+    using SafeMath for uint256;
 
+    //current price of 1 HEO in tknBts/Wei of the currency identified by address
+    mapping (address => uint256) private priceMap;
+    //address of currency token => [global reward period] => price of 1 HEO in tknBits/Wei
+    mapping(address => mapping(uint256 => uint256)) private historicalPriceMap;
+
+    HEOGlobalParameters private _globalParams;
+
+    constructor(HEOGlobalParameters globalParams) public {
+        _globalParams = globalParams;
     }
 
     /**
@@ -11,7 +21,9 @@ contract HEOPriceOracle is Ownable {
     * If {token} is a zero-address, then the price is in native tokens of the blockchain (ETH, BSC, NEAR).
     */
     function setPrice(address token, uint256 price) public onlyOwner {
+        uint256 rewardPeriod = block.timestamp.sub(_globalParams.globalRewardStart()).div(_globalParams.rewardPeriod());
         priceMap[token] = price;
+        historicalPriceMap[token][rewardPeriod] = price;
     }
 
     /**
@@ -20,5 +32,14 @@ contract HEOPriceOracle is Ownable {
     */
     function getPrice(address token) external view returns(uint256) {
         return priceMap[token];
+    }
+
+    /**
+    * Get price of HEO in {token}s at {period}.
+    * {period} is the number of _globalParams.rewardPeriod() since globalParams.globalRewardStart().
+    * If {token} is a zero-address, then the price is in native tokens of the blockchain (ETH, BSC, NEAR).
+    */
+    function getPriceAtPeriod(address token, uint256 period) external view returns(uint256) {
+        return historicalPriceMap[token][period];
     }
 }
