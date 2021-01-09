@@ -11,13 +11,13 @@ import "openzeppelin-solidity/contracts/token/ERC20/ERC20.sol";
 import "openzeppelin-solidity/contracts/access/Ownable.sol";
 
 contract HEOToken is ERC20, Ownable {
-	/**
+	/*
 	* Contracts authorized to mint and burn HEO tokens
 	*/
 	mapping (address => bool) private _minters;
 	mapping (address => bool) private _burners;
 
-	/**
+	/*
 	* Token distribution controls
 	*/
 	uint256 private _maxSupply; //Maximum allowed supply of HEO tokens
@@ -27,7 +27,7 @@ contract HEOToken is ERC20, Ownable {
 	event BurnerAdded(address indexed newBurner);
 	event BurnerRemoved(address indexed oldBurner);
 
-	constructor() public ERC20("Help Each Other platform token", "HEO") {
+	constructor() ERC20("Help Each Other platform token", "HEO") {
 		_maxSupply = 30000000000000000000000000;
 	}
 
@@ -49,7 +49,7 @@ contract HEOToken is ERC20, Ownable {
 		}
 	}
 
-	/**
+	/*
 	* Make {mint} and {burn} public, so that authorized minter and burner contracts
 	* can call these methods.
 	* {_beforeTokenTransfer} is called by {_mint) and {_burn} and performs validation
@@ -95,14 +95,14 @@ contract HEOToken is ERC20, Ownable {
 		return _burners[addr];
 	}
 
-	/**
+	/*
     * Returns maximum allowed supply.
     */
 	function maxSupply() public view returns (uint256) {
 		return _maxSupply;
 	}
 
-	/**
+	/*
 	* Override default Ownable::renounceOwnership to make sure
 	* this contract does not get orphaned.
 	*/

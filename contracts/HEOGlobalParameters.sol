@@ -9,7 +9,7 @@ contract HEOGlobalParameters is Ownable {
     uint256 private _globalRewardStart; //when period 0 starts
 
     constructor(uint256 serviceFee, uint256 profitabilityCoefficient, uint8 yDecimals, uint256 rewardPeriod,
-        uint256 maxRewardPeriods) public {
+        uint256 maxRewardPeriods) {
         _serviceFee = serviceFee;
         _profitabilityCoefficient = profitabilityCoefficient;
         _yDecimals = yDecimals;
@@ -24,6 +24,18 @@ contract HEOGlobalParameters is Ownable {
 
     function setProfitabilityCoefficient(uint256 profitabilityCoefficient) external onlyOwner {
         _profitabilityCoefficient = profitabilityCoefficient;
+    }
+
+    function setGlobalRewardStart(uint256 globalRewardStart) external onlyOwner {
+        _globalRewardStart = globalRewardStart;
+    }
+
+    function setRewardPeriod(uint256 rewardPeriod) external onlyOwner {
+        _rewardPeriod = rewardPeriod;
+    }
+
+    function setMaxRewardPeriods(uint256 maxRewardPeriods) external onlyOwner {
+        _maxRewardPeriods = maxRewardPeriods;
     }
 
     function profitabilityCoefficient() external view returns (uint256) {

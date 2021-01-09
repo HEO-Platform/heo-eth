@@ -5,6 +5,7 @@ const HEOCampaignFactory = artifacts.require("HEOCampaignFactory");
 const HEOPriceOracle = artifacts.require("HEOPriceOracle");
 const HEOGlobalParameters = artifacts.require("HEOGlobalParameters");
 const HEOCampaignRegistry = artifacts.require("HEOCampaignRegistry");
+const HEORewardFarm = artifacts.require("HEORewardFarm");
 var BN = web3.utils.BN;
 var ownerAccount, iRegistry, iToken, iGlobalParams, iPriceOracle, iDistribution, iCampaignFactory;
 contract("HEOCampaignFactory", (accounts) => {
@@ -16,9 +17,10 @@ contract("HEOCampaignFactory", (accounts) => {
         iGlobalParams = await HEOGlobalParameters.deployed();
         iPriceOracle = await HEOPriceOracle.deployed();
         iDistribution = await HEOManualDistribution.deployed();
+        iRewardFarm = await HEORewardFarm.deployed();
         await iPriceOracle.setPrice("0x0000000000000000000000000000000000000000", web3.utils.toWei("1", "ether"));
         iCampaignFactory = await HEOCampaignFactory.new(iRegistry.address, iToken.address,
-            iGlobalParams.address, iPriceOracle.address);
+            iGlobalParams.address, iPriceOracle.address, iRewardFarm.address);
         await iRegistry.setFactory(iCampaignFactory.address);
         await iToken.addMinter(iDistribution.address, {from: ownerAccount});
         await iToken.addBurner(iCampaignFactory.address, {from: ownerAccount});

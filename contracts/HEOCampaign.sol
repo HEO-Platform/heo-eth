@@ -4,6 +4,7 @@ import "./IHEOCampaign.sol";
 import "openzeppelin-solidity/contracts/access/Ownable.sol";
 import "openzeppelin-solidity/contracts/math/SafeMath.sol";
 import "./HEOPriceOracle.sol";
+import "./IHEORewardFarm.sol";
 import "./HEOCampaignFactory.sol";
 import "./HEOGlobalParameters.sol";
 import "./HEOToken.sol";
@@ -26,7 +27,7 @@ contract HEOCampaign is IHEOCampaign, Ownable {
     * Owner of the campaign is the instance of HEOCampaignFactory
     */
     constructor (uint256 maxAmount, address beneficiary, uint256 profitabilityCoefficient,
-        uint256 burntHeo, uint256 heoPrice, uint256 serviceFee) public {
+        uint256 burntHeo, uint256 heoPrice, address currency, uint256 serviceFee) {
         require(beneficiary != address(0), "HEOCampaign: beneficiary cannot be a zero address.");
         require(maxAmount > 0, "HEOCampaign: _maxAmount cannot be 0.");
         require(burntHeo > 0, "HEOCampaign: _burntHeo cannot be 0.");
@@ -38,7 +39,9 @@ contract HEOCampaign is IHEOCampaign, Ownable {
         _heoPrice = heoPrice;
         _burntHeo = burntHeo;
         _profitabilityCoefficient = profitabilityCoefficient;
-        _isNative = false;
+        if(currency == address(0)) {
+            _isNative = true;
+        }
     }
 
     /**
@@ -50,8 +53,12 @@ contract HEOCampaign is IHEOCampaign, Ownable {
         uint256 raisedFunds = _raisedFunds.add(msg.value);
         require(raisedFunds <= _maxAmount, "HEOCampaign: this contribution will exceed maximum allowed for this campaign.");
         _raisedFunds = raisedFunds;
+        IHEORewardFarm(HEOCampaignFactory(owner()).rewardFarm()).addDonation(_msgSender(), msg.value, address(0));
     }
 
+    receive() external payable {
+        donateNative();
+    }
     /**
     * By burning additional tokens, the beneficiary can increase yield (Y)
     * for donors. Doing so automatically lowers Z (inverse fundraising cost)

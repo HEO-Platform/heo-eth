@@ -12,21 +12,23 @@ contract HEOPriceOracle is Ownable {
 
     HEOGlobalParameters private _globalParams;
 
-    constructor(HEOGlobalParameters globalParams) public {
+    constructor(HEOGlobalParameters globalParams) {
         _globalParams = globalParams;
     }
 
-    /**
+    /*
     * Sets the price of HEO in {token}s.
     * If {token} is a zero-address, then the price is in native tokens of the blockchain (ETH, BSC, NEAR).
     */
     function setPrice(address token, uint256 price) public onlyOwner {
-        uint256 rewardPeriod = block.timestamp.sub(_globalParams.globalRewardStart()).div(_globalParams.rewardPeriod());
         priceMap[token] = price;
-        historicalPriceMap[token][rewardPeriod] = price;
+        historicalPriceMap[token][getCurrentPeriod()] = price;
     }
 
-    /**
+    function getCurrentPeriod() public view returns(uint256) {
+        return block.timestamp.sub(_globalParams.globalRewardStart()).div(_globalParams.rewardPeriod());
+    }
+    /*
     * Get price of HEO in {token}s.
     * If {token} is a zero-address, then the price is in native tokens of the blockchain (ETH, BSC, NEAR).
     */
@@ -34,12 +36,17 @@ contract HEOPriceOracle is Ownable {
         return priceMap[token];
     }
 
-    /**
+    /*
     * Get price of HEO in {token}s at {period}.
     * {period} is the number of _globalParams.rewardPeriod() since globalParams.globalRewardStart().
     * If {token} is a zero-address, then the price is in native tokens of the blockchain (ETH, BSC, NEAR).
     */
     function getPriceAtPeriod(address token, uint256 period) external view returns(uint256) {
-        return historicalPriceMap[token][period];
+        uint256 price = historicalPriceMap[token][period];
+        while(price == 0 && period > 0) {
+            period--;
+            price = historicalPriceMap[token][period];
+        }
+        return price;
     }
 }

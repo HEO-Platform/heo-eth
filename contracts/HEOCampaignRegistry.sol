@@ -5,16 +5,16 @@ import "./IHEOCampaignFactory.sol";
 import "./IHEOCampaign.sol";
 import "./IHEOCampaignRegistry.sol";
 
-/**
+/*
 * This contract acts as storage for campaigns.
-**/
+*/
 contract HEOCampaignRegistry is IHEOCampaignRegistry, Ownable {
-    /**
+    /*
     * Maps owners do their campaigns
     */
     mapping(address => address[]) private _ownersToCampaigns;
 
-    /**
+    /*
     * Reverse map of campaigns to owners
     */
     mapping(address => address) private _campaignsToOwners;
@@ -22,9 +22,9 @@ contract HEOCampaignRegistry is IHEOCampaignRegistry, Ownable {
     //use interface, so that we can replace the factory contract
     IHEOCampaignFactory private _factory;
 
-    constructor () public {
+    constructor () {
     }
-    /**
+    /*
     * Override default Ownable::renounceOwnership to make sure
     * this contract does not get orphaned.
     */
@@ -32,7 +32,7 @@ contract HEOCampaignRegistry is IHEOCampaignRegistry, Ownable {
         revert("HEOCampaignRegistry: Cannot renounce ownership");
     }
 
-    /**
+    /*
     * Instance of IHEOCampaignFactory that is authorized to store
     * campaigns in this contract.
     */

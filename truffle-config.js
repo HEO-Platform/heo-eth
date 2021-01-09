@@ -20,7 +20,7 @@ module.exports = {
   //
     compilers: {
         solc: {
-            version: "0.6.1",
+            version: "0.7.2",
                 // Can also be set to "native" to use a native solc
             docker: false, // Use a version obtained through docker
             parser: "solcjs", // Leverages solc-js purely for speedy parsing
