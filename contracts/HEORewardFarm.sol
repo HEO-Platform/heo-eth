@@ -30,7 +30,7 @@ contract HEORewardFarm is IHEORewardFarm, Context {
     HEOPriceOracle private _priceOracle;
     IHEOCampaignRegistry private _registry;
 
-    constructor(HEOGlobalParameters globalParams, HEOPriceOracle priceOracle, IHEOCampaignRegistry registry) {
+    constructor(HEOGlobalParameters globalParams, HEOPriceOracle priceOracle, IHEOCampaignRegistry registry) public {
         _globalParams = globalParams;
         _priceOracle = priceOracle;
         _registry = registry;

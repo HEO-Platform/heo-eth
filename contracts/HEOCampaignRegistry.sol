@@ -22,7 +22,7 @@ contract HEOCampaignRegistry is IHEOCampaignRegistry, Ownable {
     //use interface, so that we can replace the factory contract
     IHEOCampaignFactory private _factory;
 
-    constructor () {
+    constructor () public {
     }
     /*
     * Override default Ownable::renounceOwnership to make sure

@@ -27,7 +27,7 @@ contract HEOToken is ERC20, Ownable {
 	event BurnerAdded(address indexed newBurner);
 	event BurnerRemoved(address indexed oldBurner);
 
-	constructor() ERC20("Help Each Other platform token", "HEO") {
+	constructor() ERC20("Help Each Other platform token", "HEO") public {
 		_maxSupply = 30000000000000000000000000;
 	}
 

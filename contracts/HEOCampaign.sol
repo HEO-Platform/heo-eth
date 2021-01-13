@@ -27,7 +27,7 @@ contract HEOCampaign is IHEOCampaign, Ownable {
     * Owner of the campaign is the instance of HEOCampaignFactory
     */
     constructor (uint256 maxAmount, address beneficiary, uint256 profitabilityCoefficient,
-        uint256 burntHeo, uint256 heoPrice, address currency, uint256 serviceFee) {
+        uint256 burntHeo, uint256 heoPrice, address currency, uint256 serviceFee) public {
         require(beneficiary != address(0), "HEOCampaign: beneficiary cannot be a zero address.");
         require(maxAmount > 0, "HEOCampaign: _maxAmount cannot be 0.");
         require(burntHeo > 0, "HEOCampaign: _burntHeo cannot be 0.");

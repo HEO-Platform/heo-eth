@@ -20,7 +20,7 @@ contract HEOManualDistribution is Ownable, ReentrancyGuard {
     uint256 private _limit; //Amount of HEO tokens (in tknBits) to be distributed
     uint256 private _distributed; //Amount of HEO (in tknBits) tokens already distributed
 
-    constructor (uint256 limit, uint256 distributed, string memory name, HEOToken token) {
+    constructor (uint256 limit, uint256 distributed, string memory name, HEOToken token) public {
         _limit = limit;
         _distributed = distributed;
         require(address(token) != address(0), "HEOManualDistribution: token is the zero address.");

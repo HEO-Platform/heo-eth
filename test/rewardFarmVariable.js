@@ -40,50 +40,15 @@ contract("HEORewardFarm", (accounts) => {
         await timeMachine.advanceTimeAndBlock(2);
     });
 
-    it("Should calculate full reward of 0.2 ETH (1 HEO) after 12 reward periods of 2s each with constant HEO price of 0.2ETH by donating 1ETH to a campaign with Y=0.2", async() => {
+    it("Should calculate full reward of 2 ETH as 7.5 HEO when HEO price doubles for the second half of reward period", async() => {
         //test conditions
-        await iGlobalParams.setRewardPeriod(2);//set reward period to 1 second for testing
-        await iGlobalParams.setMaxRewardPeriods(12);
-        //Set price to 0.2ETH per 1 HEO
-        var iPriceOracle = await HEOPriceOracle.deployed();
-        await iPriceOracle.setPrice('0x0000000000000000000000000000000000000000', web3.utils.toWei(""+0.2));
-        //deploy campaign for 100 ETH and burn 5 HEO (1 ETH worgh of HEO)
-        await iCampaignFactory.createCampaign(web3.utils.toWei("100"), web3.utils.toWei("5"),
-            "0x0000000000000000000000000000000000000000", {from: charityAccount});
-        var myCampaigns = await iRegistry.getMyCampaigns.call({from: charityAccount});
-        var lastCampaign = await HEOCampaign.at(myCampaigns[myCampaigns.length-1]);
-        var z = await lastCampaign.getZ.call();
-        assert.equal(z.toString(), "100", "Expecting Z = 100, but got " + z.toString());
-        var y = await lastCampaign.donationYield.call();
-        assert.isTrue(new BN(web3.utils.toWei("0.2")).eq(y), "Expecting y = 0.2, but got " + y.toString());
-        //Make donation of 1 ETH
-        await lastCampaign.donateNative({from: investorAccount1, value: web3.utils.toWei("1", "ether")});
-        //Advance time
-        await timeMachine.advanceTimeAndBlock(30);
-        //Check reward
-        var myReward = await iRewardFarm.calculateReward(investorAccount1);
-        var numDonations = await iRewardFarm.numDonations(investorAccount1);
-        var startPeriod = await iRewardFarm.startPeriod(investorAccount1);
-        var rewardPeriods = await iRewardFarm.rewardPeriods(investorAccount1);
-        var periodReward = await iRewardFarm.periodReward(investorAccount1);
-        var firstReward = await iRewardFarm.firstReward(investorAccount1);
-        var donationAmount = await iRewardFarm.donationAmount(investorAccount1);
-        var x = await iGlobalParams.profitabilityCoefficient();
-        console.log(`Y = ${y}, Z = ${z}, X = ${x}`);
-        console.log(`donationAmount: ${donationAmount}, numDonations: ${numDonations}, startPeriod: ${startPeriod}, rewardPeriods: ${rewardPeriods}, periodReward: ${periodReward}, firstReward: ${firstReward}`);
-        //should get 1 ETH worth of HEO, which at HEO = 0.2ETH is 5 HEO
-        assert.isTrue(new BN(web3.utils.toWei("1")).eq(myReward), "Expecting reward of 1 HEO, but got " + myReward.toString());
-    });
-
-    it("Should calculate full reward of 2 ETH (10 HEO) after 365 reward periods of 2s each with constant HEO price of 0.2ETH by donating 1ETH to a campaign with Y=2", async() => {
-        //test conditions
-        await iGlobalParams.setRewardPeriod(2);//set reward period to 1 second for testing
-        await iGlobalParams.setMaxRewardPeriods(365);
+        await iGlobalParams.setRewardPeriod(3);//set reward period to 1 second for testing
+        await iGlobalParams.setMaxRewardPeriods(40);
         //Set price to 0.2ETH per 1 HEO
         var iPriceOracle = await HEOPriceOracle.deployed();
         await iPriceOracle.setPrice('0x0000000000000000000000000000000000000000', web3.utils.toWei(""+0.2));
         //deploy campaign for 100 ETH and burn 50 HEO (10 ETH worth of HEO)
-        await iCampaignFactory.createCampaign(web3.utils.toWei("100"), web3.utils.toWei("50"),
+        await iCampaignFactory.createCampaign(web3.utils.toWei("100") /* ETH */, web3.utils.toWei("50") /* HEO */,
             "0x0000000000000000000000000000000000000000", {from: charityAccount});
         var myCampaigns = await iRegistry.getMyCampaigns.call({from: charityAccount});
         var lastCampaign = await HEOCampaign.at(myCampaigns[myCampaigns.length-1]);
@@ -92,18 +57,36 @@ contract("HEORewardFarm", (accounts) => {
         var y = await lastCampaign.donationYield.call();
         assert.isTrue(new BN(web3.utils.toWei("2")).eq(y), "Expecting y = 2, but got " + y.toString());
         //Make donation of 1 ETH
-        await lastCampaign.donateNative({from: investorAccount2, value: web3.utils.toWei("1", "ether")});
+        await lastCampaign.donateNative({from: investorAccount3, value: web3.utils.toWei("1", "ether")});
         //Advance time
 
-        for(var i=0;i<500;i++) {
+        for(var i=0;i<20;i++) {
             await iPriceOracle.setPrice('0x0000000000000000000000000000000000000000', web3.utils.toWei(""+0.2));
-            await timeMachine.advanceTimeAndBlock(2);
+            await timeMachine.advanceTimeAndBlock(3);
         }
-
+        for(var i=0;i<20;i++) {
+            await iPriceOracle.setPrice('0x0000000000000000000000000000000000000000', web3.utils.toWei(""+0.4));
+            await timeMachine.advanceTimeAndBlock(3);
+        }
+        /*        var numDonations = await iRewardFarm.numDonations(investorAccount2);
+                var startPeriod = await iRewardFarm.startPeriod(investorAccount2);
+                var rewardPeriods = await iRewardFarm.rewardPeriods(investorAccount2);
+                var periodReward = await iRewardFarm.periodReward(investorAccount2);
+                var firstReward = await iRewardFarm.firstReward(investorAccount2);
+                var donationAmount = await iRewardFarm.donationAmount(investorAccount2);
+                var periodPrice1 = await iRewardFarm.periodPrice(investorAccount2, 0);
+                var periodPrice2 = await iRewardFarm.periodPrice(investorAccount2, 1);
+                var periodPrice300 = await iRewardFarm.periodPrice(investorAccount2, 300);
+                var x = await iGlobalParams.profitabilityCoefficient();
+                console.log(`Y = ${y}, Z = ${z}, X = ${x}`);
+                console.log(`donationAmount: ${donationAmount}, numDonations: ${numDonations}, startPeriod: ${startPeriod}, rewardPeriods: ${rewardPeriods}, periodReward: ${periodReward}, firstReward: ${firstReward}`);
+                console.log(`periodPrice1: ${periodPrice1},periodPrice2: ${periodPrice2}, periodPrice300: ${periodPrice300}`);
+        */
         //Check reward
-        var myReward = await iRewardFarm.calculateReward(investorAccount2);
-        console.log("Expecting reward of 10 HEO, but got " + myReward.toString());
+        var myReward = await iRewardFarm.calculateReward(investorAccount3);
+
+        //console.log("Expecting reward of 7.5 HEO, but got " + Math.round(myReward.div(new BN("10000000000000000")).toNumber()/100));
         //should get 2 ETH worth of HEO, which at HEO = 0.2ETH is 10 HEO
-        assert.isTrue(new BN(web3.utils.toWei("10")).eq(myReward), "Expecting reward of 10 HEO, but got " + myReward.toString());
+        assert.isTrue(new BN("7499999999999999000").eq(myReward), "Expecting reward of 7.5s HEO, but got " + myReward.toString());
     });
 });

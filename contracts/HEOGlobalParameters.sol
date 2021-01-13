@@ -9,7 +9,7 @@ contract HEOGlobalParameters is Ownable {
     uint256 private _globalRewardStart; //when period 0 starts
 
     constructor(uint256 serviceFee, uint256 profitabilityCoefficient, uint8 yDecimals, uint256 rewardPeriod,
-        uint256 maxRewardPeriods) {
+        uint256 maxRewardPeriods) public {
         _serviceFee = serviceFee;
         _profitabilityCoefficient = profitabilityCoefficient;
         _yDecimals = yDecimals;

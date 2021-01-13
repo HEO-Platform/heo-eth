@@ -12,7 +12,7 @@ contract HEOPriceOracle is Ownable {
 
     HEOGlobalParameters private _globalParams;
 
-    constructor(HEOGlobalParameters globalParams) {
+    constructor(HEOGlobalParameters globalParams) public {
         _globalParams = globalParams;
     }
 

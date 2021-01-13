@@ -40,15 +40,15 @@ contract("HEOCampaignFactory", (accounts) => {
         var countAfter = myCampaigns.length;
         assert.equal(1, countAfter, "Should have one campaign registered.");
         var lastCampaign = myCampaigns[0];
-        assert.isNotNull(lastCampaign);
+        assert.isNotNull(lastCampaign, "Last campaign address is null");
         lastCampaign = await HEOCampaign.at(lastCampaign);
-        assert.isNotNull(lastCampaign);
+        assert.isNotNull(lastCampaign, "Last campaign is null");
         var maxAmount = await lastCampaign.maxAmount.call();
-        assert.isTrue(new BN(maxAmount).eq(new BN(web3.utils.toWei("100"))));
+        assert.isTrue(new BN(maxAmount).eq(new BN(web3.utils.toWei("100"))), "Expected maxAmount to be 100, but got " + maxAmount.toString());
         var heoPrice = await lastCampaign.heoPrice.call();
-        assert.isTrue(new BN(heoPrice).eq(new BN(web3.utils.toWei("1"))));
+        assert.isTrue(new BN(heoPrice).eq(new BN(web3.utils.toWei("1"))), "Expected HEO price to be 1, but got " + heoPrice.toString());
         var burntHeo = await lastCampaign.burntHeo.call();
-        assert.isTrue(new BN(burntHeo).eq(new BN(web3.utils.toWei("1"))));
+        assert.isTrue(new BN(burntHeo).eq(new BN(web3.utils.toWei("1"))), "Expected burnt amount to be 1, but got " + burntHeo.toString());
         var x = await lastCampaign.profitabilityCoefficient.call();
         assert.isTrue(new BN(x).eq(new BN("20")), "Expecting X = 20, but found " + x);
         var z = await lastCampaign.getZ.call();
@@ -59,7 +59,7 @@ contract("HEOCampaignFactory", (accounts) => {
         /*console.log("Z " + z);
         console.log("Y " + y);
         console.log("Donation yield: " + y.toNumber()/10**yieldDecimals.toNumber())*/
-        assert.isTrue(new BN("20000").eq(y), "Expecting Y to be 20000 but got " + y);
+        assert.isTrue(new BN("200000000000000000").eq(y), "Expecting Y to be 200000000000000000 but got " + y);
     });
 
     it("Should fail to deploy campaign w/o burning HEO", async () => {
@@ -238,7 +238,7 @@ contract("HEOCampaignFactory", (accounts) => {
         var lastCampaign = await HEOCampaign.at(deployEvent.args.campaignAddress);
         assert.isNotNull(lastCampaign, "Deployed HEOCampaign should not be null.");
         var y = await lastCampaign.donationYield.call();
-        assert.isTrue(new BN("60606").eq(y), "Expecting Y to be 60606 but got " + y);
+        assert.isTrue(new BN("606060606060606060").eq(y), "Expecting Y to be 606060606060606060 but got " + y);
         var z = await lastCampaign.getZ.call();
         assert.isTrue(z.eq(new BN("33")), "Expecting Z to be 33, but got " + z.toString());
 
@@ -281,7 +281,7 @@ contract("HEOCampaignFactory", (accounts) => {
         //Try increasing yield with unregistered campaign address
         try {
             let rogueCampaign = await HEOCampaign.new(web3.utils.toWei("100"), charityAccount, 20,
-                web3.utils.toWei("1"), web3.utils.toWei("1"), 0);
+                web3.utils.toWei("1"), web3.utils.toWei("1"), "0x0000000000000000000000000000000000000000", 0);
             assert.isNotNull(rogueCampaign, "Rogue campaign should be deployed");
             assert.isNotNull(rogueCampaign.address, "Rogue campaign should have an address");
             let beneficiary = await rogueCampaign.beneficiary.call();
@@ -308,7 +308,7 @@ contract("HEOCampaignFactory", (accounts) => {
         }
 
         var newY = await lastCampaign.donationYield.call();
-        assert.isTrue(new BN("60606").eq(newY), "Expecting Y to remain 60606 but got " + y);
+        assert.isTrue(new BN("606060606060606060").eq(newY), "Expecting Y to remain 606060606060606060 but got " + y);
         var newZ = await lastCampaign.getZ.call();
         assert.isTrue(newZ.eq(new BN("33")), "Expecting Z to remain 33, but got " + z.toString());
     });
@@ -352,7 +352,7 @@ contract("HEOCampaignFactory", (accounts) => {
         assert.isTrue(balanceBefore.sub(balanceAfter).eq(new BN(web3.utils.toWei("500"))),
             balanceBefore.toString() + "-" + balanceAfter.toString() + " != " + web3.utils.toWei("500"));
         var y = await lastCampaign.donationYield.call();
-        assert.isTrue(new BN("100000").eq(y), "Expecting Y to be 100000 but got " + y);
+        assert.isTrue(new BN("1000000000000000000").eq(y), "Expecting Y to be 1000000000000000000 but got " + y);
 
         //Burn another 500 HEO to double the Yield
         await iCampaignFactory.increaseYield(deployEvent.args.campaignAddress, web3.utils.toWei("500"),
@@ -363,6 +363,6 @@ contract("HEOCampaignFactory", (accounts) => {
         var newZ = await lastCampaign.getZ.call();
         var newY = await lastCampaign.donationYield.call();
         assert.isTrue(newZ.eq(new BN("10"))), "Expected Z to change to 10";
-        assert.isTrue(newY.eq(new BN("200000")), "Expected Y to change to 200000");
+        assert.isTrue(newY.eq(new BN("2000000000000000000")), "Expected Y to change to 200000");
     });
 });

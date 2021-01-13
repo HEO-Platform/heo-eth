@@ -23,7 +23,7 @@ contract HEOCampaignFactory is IHEOCampaignFactory, Ownable {
     * {heoToken} instance of HEOToken
     */
     constructor (IHEOCampaignRegistry registry, HEOToken heoToken, HEOGlobalParameters globalParams,
-        HEOPriceOracle priceOracle, IHEORewardFarm rewardFarm) {
+        HEOPriceOracle priceOracle, IHEORewardFarm rewardFarm) public {
         require(address(registry) != address(0), "HEOCampaignFactory: IHEOCampaignRegistry cannot be zero-address");
         require(address(heoToken) != address(0), "HEOCampaignFactory: HEOToken cannot be zero-address");
         require(address(globalParams) != address(0), "HEOCampaignFactory: HEOGlobalParameters cannot be zero-address");
