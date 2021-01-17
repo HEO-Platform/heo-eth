@@ -22,7 +22,16 @@ contract HEOPriceOracle is Ownable {
     */
     function setPrice(address token, uint256 price) public onlyOwner {
         priceMap[token] = price;
-        historicalPriceMap[token][getCurrentPeriod()] = price;
+        uint256 currentPeriod = getCurrentPeriod();
+        historicalPriceMap[token][currentPeriod] = price;
+        //Fill gaps if any
+        if(currentPeriod > 0) {
+            currentPeriod = currentPeriod.sub(1);
+            while(currentPeriod > 0 && historicalPriceMap[token][currentPeriod] == 0) {
+                historicalPriceMap[token][currentPeriod] = price;
+                currentPeriod = currentPeriod.sub(1);
+            }
+        }
     }
 
     function getCurrentPeriod() public view returns(uint256) {
@@ -44,7 +53,7 @@ contract HEOPriceOracle is Ownable {
     function getPriceAtPeriod(address token, uint256 period) external view returns(uint256) {
         uint256 price = historicalPriceMap[token][period];
         while(price == 0 && period > 0) {
-            period--;
+            period = period.sub(1);
             price = historicalPriceMap[token][period];
         }
         return price;

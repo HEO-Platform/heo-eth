@@ -88,7 +88,7 @@ contract("HEORewardFarm", (accounts) => {
                 console.log(`periodPrice1: ${periodPrice1},periodPrice2: ${periodPrice2}, periodPrice300: ${periodPrice300}`);
         */
         //Check reward
-        var myReward = await iRewardFarm.calculateReward(investorAccount1);
+        var myReward = await iRewardFarm.calculateReward(investorAccount1, 0);
 
         //console.log("Expecting reward of 7.5 HEO, but got " + Math.round(myReward.div(new BN("10000000000000000")).toNumber()/100));
         //should get 2 ETH worth of HEO, which at HEO = 0.2ETH is 10 HEO
@@ -174,7 +174,7 @@ contract("HEORewardFarm", (accounts) => {
                 console.log(`periodPrice1: ${periodPrice1},periodPrice2: ${periodPrice2}, periodPrice300: ${periodPrice300}`);
         */
         //Check reward
-        var myReward = await iRewardFarm.calculateReward(investorAccount3);
+        var myReward = await iRewardFarm.calculateReward(investorAccount3, 0);
 
         //console.log("Expecting reward of 7.5 HEO, but got " + Math.round(myReward.div(new BN("10000000000000000")).toNumber()/100));
         //should get 2 ETH worth of HEO, which at HEO = 0.2ETH is 10 HEO
