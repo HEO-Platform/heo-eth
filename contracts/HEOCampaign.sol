@@ -97,7 +97,7 @@ contract HEOCampaign is IHEOCampaign, Ownable {
     * by value of HEO burnt to activate the campaign.
     */
     function getZ() public view returns (uint256) {
-        uint8 decimals = HEOToken(HEOCampaignFactory(owner()).heoToken()).decimals();
+        uint8 decimals = HEOToken(HEOGlobalParameters(HEOCampaignFactory(owner()).globalParams()).heoToken()).decimals();
         return _maxAmount.mul(uint256(10)**uint256(decimals)).div(_burntHeo).div(_heoPrice);
     }
 

@@ -2,16 +2,15 @@ pragma solidity >=0.6.1;
 
 import "openzeppelin-solidity/contracts/access/Ownable.sol";
 import "./HEOCampaign.sol";
-import "./HEOToken.sol";
 import "./IHEOCampaignFactory.sol";
 import "./IHEOCampaignRegistry.sol";
 import "./HEOGlobalParameters.sol";
 import "./HEOPriceOracle.sol";
+import "./HEOToken.sol";
 import "./IHEORewardFarm.sol";
 
 contract HEOCampaignFactory is IHEOCampaignFactory, Ownable {
     IHEOCampaignRegistry private _registry;
-    HEOToken private _heoToken;
     HEOGlobalParameters private _globalParams;
     HEOPriceOracle private _priceOracle;
     IHEORewardFarm private _rewardFarm;
@@ -20,17 +19,14 @@ contract HEOCampaignFactory is IHEOCampaignFactory, Ownable {
     /*
     * {registry} is the storage contract that holds maps of
     * campaigns and owners.
-    * {heoToken} instance of HEOToken
     */
-    constructor (IHEOCampaignRegistry registry, HEOToken heoToken, HEOGlobalParameters globalParams,
+    constructor (IHEOCampaignRegistry registry, HEOGlobalParameters globalParams,
         HEOPriceOracle priceOracle, IHEORewardFarm rewardFarm) public {
         require(address(registry) != address(0), "HEOCampaignFactory: IHEOCampaignRegistry cannot be zero-address");
-        require(address(heoToken) != address(0), "HEOCampaignFactory: HEOToken cannot be zero-address");
         require(address(globalParams) != address(0), "HEOCampaignFactory: HEOGlobalParameters cannot be zero-address");
         require(address(priceOracle) != address(0), "HEOCampaignFactory: HEOPriceOracle cannot be zero-address");
 
         _registry = registry;
-        _heoToken = heoToken;
         _globalParams = globalParams;
         _priceOracle = priceOracle;
         _rewardFarm = rewardFarm;
@@ -48,7 +44,7 @@ contract HEOCampaignFactory is IHEOCampaignFactory, Ownable {
         uint256 fee = _globalParams.serviceFee();
 
         //Burn HEO tokens before creating the campaign
-        _heoToken.burn(_msgSender(), heoToBurn);
+        HEOToken(_globalParams.heoToken()).burn(_msgSender(), heoToBurn);
         HEOCampaign campaign = new HEOCampaign(maxAmount, _msgSender(), x, heoToBurn, price, token, fee);
         _registry.registerCampaign(campaign);
         emit CampaignDeployed(address(campaign));
@@ -63,7 +59,7 @@ contract HEOCampaignFactory is IHEOCampaignFactory, Ownable {
         require(campaign.beneficiary() == _msgSender(), "HEOCampaignFactory: only beneficiary can increase campaign yield.");
         address registeredOwner = _registry.getOwner(campaign);
         require(registeredOwner != address(0), "HEOCampaignFactory: campaign is not registered.");
-        _heoToken.burn(_msgSender(), heoToBurn);
+        HEOToken( _globalParams.heoToken()).burn(_msgSender(), heoToBurn);
         campaign.increaseYield(heoToBurn);
     }
 
@@ -81,10 +77,6 @@ contract HEOCampaignFactory is IHEOCampaignFactory, Ownable {
 
     function priceOracle() public view returns (address) {
         return address(_priceOracle);
-    }
-
-    function heoToken() public view returns(address) {
-        return address(_heoToken);
     }
 
     function globalParams() public view returns (address) {

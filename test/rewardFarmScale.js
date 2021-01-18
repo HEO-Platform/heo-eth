@@ -11,7 +11,7 @@ const REWARD_PERIOD = 10;
 const MAX_CAMPAIGNS = 25;
 var BN = web3.utils.BN;
 var ownerAccount, charityAccount, investorAccount1, iRewardFarm, iRegistry, iToken, iGlobalParams, iPriceOracle, iDistribution, iCampaignFactory;
-contract("HEORewardFarm", (accounts) => {
+contract("HEORewardFarm - scale", (accounts) => {
     before(async () => {
         ownerAccount = accounts[0];
         charityAccount = accounts[1];
@@ -26,7 +26,7 @@ contract("HEORewardFarm", (accounts) => {
         iDistribution = await HEOManualDistribution.deployed();
         iRewardFarm = await HEORewardFarm.deployed();
         await iPriceOracle.setPrice("0x0000000000000000000000000000000000000000", web3.utils.toWei("1", "ether"));
-        iCampaignFactory = await HEOCampaignFactory.new(iRegistry.address, iToken.address,
+        iCampaignFactory = await HEOCampaignFactory.new(iRegistry.address,
             iGlobalParams.address, iPriceOracle.address, iRewardFarm.address);
         await iRegistry.setFactory(iCampaignFactory.address);
         await iToken.addMinter(iDistribution.address, {from: ownerAccount});
@@ -91,7 +91,7 @@ contract("HEORewardFarm", (accounts) => {
             assert.isFalse(new BN("0").eq(periodPrice), `Period price is ${periodPrice.toString()} at period ${i}`)
         }
         //Check reward
-        var myDonations = (await iRewardFarm.getActiveDonationCount.call(investorAccount1)).toNumber();
+        var myDonations = (await iRewardFarm.getDonationCount.call(investorAccount1)).toNumber();
         var totalReward = new BN("0");
         for(var i = 0; i < myDonations; i++) {
             try {
@@ -106,7 +106,7 @@ contract("HEORewardFarm", (accounts) => {
             }
         }
         assert.equal(myDonations, MAX_CAMPAIGNS*2, `Expecting to have made ${MAX_CAMPAIGNS*2} donations, but found ${myDonations}`);
-        assert.isTrue(new BN("376712328767123268500").eq(totalReward), `Expecting reward of ${web3.utils.fromWei("376712328767123268500")} HEO, but got ${totalReward.toString()}`);
+        assert.isTrue(new BN("376712328767121568500").eq(totalReward), `Expecting reward of ${web3.utils.fromWei("376712328767123268500")} HEO, but got ${totalReward.toString()}`);
     });
 });
 

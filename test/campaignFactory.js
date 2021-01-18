@@ -19,7 +19,7 @@ contract("HEOCampaignFactory", (accounts) => {
         iDistribution = await HEOManualDistribution.deployed();
         iRewardFarm = await HEORewardFarm.deployed();
         await iPriceOracle.setPrice("0x0000000000000000000000000000000000000000", web3.utils.toWei("1", "ether"));
-        iCampaignFactory = await HEOCampaignFactory.new(iRegistry.address, iToken.address,
+        iCampaignFactory = await HEOCampaignFactory.new(iRegistry.address,
             iGlobalParams.address, iPriceOracle.address, iRewardFarm.address);
         await iRegistry.setFactory(iCampaignFactory.address);
         await iToken.addMinter(iDistribution.address, {from: ownerAccount});

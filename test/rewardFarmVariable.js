@@ -9,14 +9,15 @@ const HEORewardFarm = artifacts.require("HEORewardFarm");
 const timeMachine = require('ganache-time-traveler');
 const REWARD_PERIOD = 10;
 var BN = web3.utils.BN;
-var ownerAccount, charityAccount, investorAccount1, investorAccount2,  investorAccount3, iRewardFarm, iRegistry, iToken, iGlobalParams, iPriceOracle, iDistribution, iCampaignFactory;
-contract("HEORewardFarm", (accounts) => {
+var ownerAccount, charityAccount, investorAccount1, investorAccount2,  investorAccount3, randomPerson, iRewardFarm, iRegistry, iToken, iGlobalParams, iPriceOracle, iDistribution, iCampaignFactory;
+contract("HEORewardFarm - variable", (accounts) => {
     before(async () => {
         ownerAccount = accounts[0];
         charityAccount = accounts[1];
         investorAccount1 = accounts[2];
         investorAccount2 = accounts[3];
         investorAccount3 = accounts[4];
+        randomPerson = accounts[5];
         //deploy contracts and set initial values
         iRegistry = await HEOCampaignRegistry.deployed();
         iToken = await HEOToken.deployed();
@@ -25,11 +26,12 @@ contract("HEORewardFarm", (accounts) => {
         iDistribution = await HEOManualDistribution.deployed();
         iRewardFarm = await HEORewardFarm.deployed();
         await iPriceOracle.setPrice("0x0000000000000000000000000000000000000000", web3.utils.toWei("1", "ether"));
-        iCampaignFactory = await HEOCampaignFactory.new(iRegistry.address, iToken.address,
+        iCampaignFactory = await HEOCampaignFactory.new(iRegistry.address,
             iGlobalParams.address, iPriceOracle.address, iRewardFarm.address);
         await iRegistry.setFactory(iCampaignFactory.address);
         await iToken.addMinter(iDistribution.address, {from: ownerAccount});
         await iToken.addBurner(iCampaignFactory.address, {from: ownerAccount});
+        await iToken.addMinter(iRewardFarm.address, {from: ownerAccount});
         //distribute HEO to charity, so it can deploy campaigns
         await iDistribution.distribute(charityAccount, web3.utils.toWei("200"), {from: ownerAccount});
         var blockNumber = await web3.eth.getBlockNumber();
@@ -89,10 +91,17 @@ contract("HEORewardFarm", (accounts) => {
         */
         //Check reward
         var myReward = await iRewardFarm.calculateReward(investorAccount1, 0);
-
+        //claim reward to another account
+        var investorBalanceBefore = await iToken.balanceOf.call(investorAccount1);
+        var randomsBalanceBefore = await iToken.balanceOf.call(randomPerson);
+        await iRewardFarm.claimReward(randomPerson, 0, myReward, {from: investorAccount1});
+        var investorBalanceAfter = await iToken.balanceOf.call(investorAccount1);
+        var randomsBalanceAfter = await iToken.balanceOf.call(randomPerson);
         //console.log("Expecting reward of 7.5 HEO, but got " + Math.round(myReward.div(new BN("10000000000000000")).toNumber()/100));
         //should get 2 ETH worth of HEO, which at HEO = 0.2ETH is 10 HEO
-        assert.isTrue(new BN("7499999999999999000").eq(myReward), "Expecting reward of 7.5s HEO, but got " + myReward.toString());
+        assert.isTrue(new BN("7500000000000000000").eq(myReward), "Expecting reward of 7.5 HEO, but got " + myReward.toString());
+        assert.isTrue(investorBalanceAfter.eq(investorBalanceBefore), `Expecting investor's HEO balance to remain the same. Balance after: ${investorBalanceAfter}. Balance before: ${investorBalanceBefore}`);
+        assert.isTrue(randomsBalanceAfter.sub(randomsBalanceBefore).eq(myReward), `Expecting account5's HEO balance to increase by 7.5 HEO. Balance after: ${randomsBalanceAfter}. Balance before: ${randomsBalanceBefore}`);
     });
 
     it("Should calculate full reward of 2 ETH as 4.76 НЕО when HEO price doubles every quarter", async() => {
@@ -114,13 +123,14 @@ contract("HEORewardFarm", (accounts) => {
         assert.isTrue(new BN("10").eq(z), "Expecting Z = 10, but got " + z.toString());
         var y = await lastCampaign.donationYield.call();
         assert.isTrue(new BN(web3.utils.toWei("2")).eq(y), "Expecting y = 2, but got " + y.toString());
+        var investorBalanceBefore = await iToken.balanceOf.call(investorAccount3);
         //Make donation of 1 ETH
         await lastCampaign.donateNative({from: investorAccount3, value: web3.utils.toWei("1", "ether")});
         //await timeMachine.advanceBlock();
 
         var blockNumber = await web3.eth.getBlockNumber();
         var chainTimeStart = (await web3.eth.getBlock(blockNumber)).timestamp;
-        console.log(`Starting to advanced time and change price. Current block time: ${chainTimeStart} / ${new Date(chainTimeStart*1000).toTimeString()}`);
+        console.log(`Starting to advance time and change price. Current block time: ${chainTimeStart} / ${new Date(chainTimeStart*1000).toTimeString()}`);
         for(var i=0;i<90;i++) {
             var blockNumber = await web3.eth.getBlockNumber();
             var chainTimeBefore = (await web3.eth.getBlock(blockNumber)).timestamp;
@@ -159,26 +169,24 @@ contract("HEORewardFarm", (accounts) => {
         console.log(`Current block time:  ${chainTimeEnd}  / ${new Date(chainTimeEnd*1000).toTimeString()}`);
         var elapsed = (chainTimeEnd - chainTimeStart);
         assert.equal(elapsed, 365 * REWARD_PERIOD, `Expecting blockchain to advance ${365 * REWARD_PERIOD} seconds, but got ${elapsed}`);
-        /*        var numDonations = await iRewardFarm.numDonations(investorAccount2);
-                var startPeriod = await iRewardFarm.startPeriod(investorAccount2);
-                var rewardPeriods = await iRewardFarm.rewardPeriods(investorAccount2);
-                var periodReward = await iRewardFarm.periodReward(investorAccount2);
-                var firstReward = await iRewardFarm.firstReward(investorAccount2);
-                var donationAmount = await iRewardFarm.donationAmount(investorAccount2);
-                var periodPrice1 = await iRewardFarm.periodPrice(investorAccount2, 0);
-                var periodPrice2 = await iRewardFarm.periodPrice(investorAccount2, 1);
-                var periodPrice300 = await iRewardFarm.periodPrice(investorAccount2, 300);
-                var x = await iGlobalParams.profitabilityCoefficient();
-                console.log(`Y = ${y}, Z = ${z}, X = ${x}`);
-                console.log(`donationAmount: ${donationAmount}, numDonations: ${numDonations}, startPeriod: ${startPeriod}, rewardPeriods: ${rewardPeriods}, periodReward: ${periodReward}, firstReward: ${firstReward}`);
-                console.log(`periodPrice1: ${periodPrice1},periodPrice2: ${periodPrice2}, periodPrice300: ${periodPrice300}`);
-        */
         //Check reward
         var myReward = await iRewardFarm.calculateReward(investorAccount3, 0);
 
+        //claim reward
+        await iRewardFarm.claimReward(investorAccount3, 0, myReward, {from: investorAccount3});
+        var investorBalanceAfter = await iToken.balanceOf.call(investorAccount3);
         //console.log("Expecting reward of 7.5 HEO, but got " + Math.round(myReward.div(new BN("10000000000000000")).toNumber()/100));
         //should get 2 ETH worth of HEO, which at HEO = 0.2ETH is 10 HEO
-        assert.isTrue(new BN("4762557077625571000").eq(myReward), "Expecting reward of 4.76 HEO, but got " + myReward.toString());
+        assert.isTrue(new BN("4762557077625600000").eq(myReward), "Expecting reward of 4.76 HEO, but got " + myReward.toString());
+        assert.isTrue(investorBalanceAfter.sub(investorBalanceBefore).eq(myReward), `Expecting investor's HEO balance to increase by 4.76 HEO. Balance after: ${investorBalanceAfter.toString()}. Balance before: ${investorBalanceBefore.toString()}`);
+
+        //check claimed reward
+        var claimedReward = await iRewardFarm.claimedReward(investorAccount3, 0);
+        assert.isTrue(claimedReward.eq(myReward), `Expecting claimed reward (${claimedReward.toString()}) to be equal ${myReward.toString()}`);
+
+        //check that reward calculation is still correct after claiming
+        var myReward2 = await iRewardFarm.calculateReward(investorAccount3, 0);
+        assert.isTrue(myReward2.eq(myReward), `Expecting to see ${myReward.toString()} HEO reward after claiming, but got ${myReward2.toString()}`);
     });
 });
 
