@@ -55,7 +55,7 @@ contract("HEORewardFarm - scale", (accounts) => {
 
         for (var i=0;i<MAX_CAMPAIGNS;i++) {
             await iCampaignFactory.createCampaign(web3.utils.toWei(`${campaignAmount}`), web3.utils.toWei(`${burnHeo}`),
-                "0x0000000000000000000000000000000000000000", {from: charityAccount});
+                "0x0000000000000000000000000000000000000000", "https://someurl1", {from: charityAccount});
         }
 
         //Make donations

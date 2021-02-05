@@ -31,11 +31,13 @@ contract("HEOCampaignFactory", (accounts) => {
         let charityAccount = accounts[1];
         await iDistribution.distribute(charityAccount, web3.utils.toWei("1"), {from: ownerAccount});
         //charityAccount should be able to start a campaign
+        var charityBalance = web3.utils.fromWei(await iToken.balanceOf.call(charityAccount));
+        console.log(`Charity account has ${charityBalance} HEO`);
         var myCampaigns = await iRegistry.getMyCampaigns.call({from: charityAccount});
         var countBefore = myCampaigns.length;
         assert.equal(0, countBefore, "Expecting to have 0 campaigns registered");
         await iCampaignFactory.createCampaign(web3.utils.toWei("100"), web3.utils.toWei("1"),
-            "0x0000000000000000000000000000000000000000", {from: charityAccount});
+            "0x0000000000000000000000000000000000000000", "https://someurl1", {from: charityAccount});
         myCampaigns = await iRegistry.getMyCampaigns.call({from: charityAccount});
         var countAfter = myCampaigns.length;
         assert.equal(1, countAfter, "Should have one campaign registered.");
@@ -66,7 +68,8 @@ contract("HEOCampaignFactory", (accounts) => {
         let userAccount = accounts[2];
         try {
             await iCampaignFactory.createCampaign(web3.utils.toWei("100"), web3.utils.toWei("0"),
-                "0x0000000000000000000000000000000000000000", {from: userAccount});
+                "0x0000000000000000000000000000000000000000", "https://someurl1",
+                {from: userAccount});
             assert.fail("Should throw an exception trying to deploy a campaign w/o burning HEO");
         } catch (err) {
             assert.equal(err.reason, "HEOCampaignFactory: cannot create a campaign without burning HEO tokens.",
@@ -79,7 +82,7 @@ contract("HEOCampaignFactory", (accounts) => {
         try {
             //this is PAXG address on Ropsten
             await iCampaignFactory.createCampaign(web3.utils.toWei("100"), web3.utils.toWei("1"),
-                "0xf472ba1716a3a6f4c15def3df7487057300f597a", {from: userAccount});
+                "0xf472ba1716a3a6f4c15def3df7487057300f597a", "https://someurl2", {from: userAccount});
             assert.fail("Should throw an exception trying to deploy a campaign with unsupported currency");
         } catch (err) {
             assert.equal(err.reason, "HEOCampaignFactory: currency at given address is not supported.",
@@ -92,7 +95,7 @@ contract("HEOCampaignFactory", (accounts) => {
         //userAccount has 0 HEO, so it should not be able to deploy a campaign
         try {
             await iCampaignFactory.createCampaign(web3.utils.toWei("100"), web3.utils.toWei("1"),
-                "0x0000000000000000000000000000000000000000", {from: userAccount});
+                "0x0000000000000000000000000000000000000000", "https://someurl3", {from: userAccount});
             assert.fail("Should throw an exception trying to deploy a campaign w/o HEO");
         } catch (err) {
             assert.equal(err.reason, "ERC20: burn amount exceeds balance", "Wrong error message: " + err.reason);
@@ -101,7 +104,7 @@ contract("HEOCampaignFactory", (accounts) => {
         await iDistribution.distribute(userAccount, web3.utils.toWei("2"), {from: ownerAccount});
         try {
             await iCampaignFactory.createCampaign(web3.utils.toWei("100"), web3.utils.toWei("3"),
-                "0x0000000000000000000000000000000000000000", {from: userAccount});
+                "0x0000000000000000000000000000000000000000", "https://someurl4", {from: userAccount});
             assert.fail("Should throw an exception trying to deploy a campaign with insufficient HEO");
         } catch (err) {
             assert.equal(err.reason, "ERC20: burn amount exceeds balance", "Wrong error message: " + err.reason);
@@ -109,7 +112,7 @@ contract("HEOCampaignFactory", (accounts) => {
 
         try {
             await iCampaignFactory.createCampaign(web3.utils.toWei("100"), web3.utils.toWei("2.5"),
-                "0x0000000000000000000000000000000000000000", {from: userAccount});
+                "0x0000000000000000000000000000000000000000", "https://someurl5", {from: userAccount});
             assert.fail("Should throw an exception trying to deploy a campaign with insufficient HEO");
         } catch (err) {
             assert.equal(err.reason, "ERC20: burn amount exceeds balance", "Wrong error message: " + err.reason);
@@ -125,7 +128,7 @@ contract("HEOCampaignFactory", (accounts) => {
         var myCampaigns = await iRegistry.getMyCampaigns.call({from: charityAccount});
         var countBefore = myCampaigns.length;
         var tx = await iCampaignFactory.createCampaign(web3.utils.toWei("100"), web3.utils.toWei("0.5"),
-            "0x0000000000000000000000000000000000000000", {from: charityAccount});
+            "0x0000000000000000000000000000000000000000", "https://someurl6", {from: charityAccount});
         assert.isNotNull(tx, "Transaction should not be null.");
         var events = tx.logs;
         assert.isNotNull(events, "Should have emitted events.");
@@ -173,7 +176,7 @@ contract("HEOCampaignFactory", (accounts) => {
         var myCampaigns = await iRegistry.getMyCampaigns.call({from: charityAccount});
         var countBefore = myCampaigns.length;
         var tx = await iCampaignFactory.createCampaign(web3.utils.toWei("10000"), web3.utils.toWei("1000"),
-            "0x0000000000000000000000000000000000000000", {from: charityAccount});
+            "0x0000000000000000000000000000000000000000", "https://someurl7", {from: charityAccount});
         assert.isNotNull(tx, "Transaction should not be null.");
         var events = tx.logs;
         assert.isNotNull(events, "Should have emitted events.");
@@ -223,7 +226,7 @@ contract("HEOCampaignFactory", (accounts) => {
         var myCampaigns = await iRegistry.getMyCampaigns.call({from: charityAccount});
         var countBefore = myCampaigns.length;
         var tx = await iCampaignFactory.createCampaign(web3.utils.toWei("10000"), web3.utils.toWei("300"),
-            "0x0000000000000000000000000000000000000000", {from: charityAccount});
+            "0x0000000000000000000000000000000000000000", "https://someurl8", {from: charityAccount});
         assert.isNotNull(tx, "Transaction should not be null.");
         var events = tx.logs;
         assert.isNotNull(events, "Should have emitted events.");
@@ -281,7 +284,7 @@ contract("HEOCampaignFactory", (accounts) => {
         //Try increasing yield with unregistered campaign address
         try {
             let rogueCampaign = await HEOCampaign.new(web3.utils.toWei("100"), charityAccount, 20,
-                web3.utils.toWei("1"), web3.utils.toWei("1"), "0x0000000000000000000000000000000000000000", 0);
+                web3.utils.toWei("1"), web3.utils.toWei("1"), "0x0000000000000000000000000000000000000000", 0, "https://url1");
             assert.isNotNull(rogueCampaign, "Rogue campaign should be deployed");
             assert.isNotNull(rogueCampaign.address, "Rogue campaign should have an address");
             let beneficiary = await rogueCampaign.beneficiary.call();
@@ -322,7 +325,7 @@ contract("HEOCampaignFactory", (accounts) => {
         var myCampaigns = await iRegistry.getMyCampaigns.call({from: charityAccount});
         var countBefore = myCampaigns.length;
         var tx = await iCampaignFactory.createCampaign(web3.utils.toWei("10000"), web3.utils.toWei("500"),
-            "0x0000000000000000000000000000000000000000", {from: charityAccount});
+            "0x0000000000000000000000000000000000000000", "https://someurl9", {from: charityAccount});
         assert.isNotNull(tx, "Transaction should not be null.");
         var events = tx.logs;
         assert.isNotNull(events, "Should have emitted events.");
@@ -340,6 +343,9 @@ contract("HEOCampaignFactory", (accounts) => {
         assert.isTrue(new BN(maxAmount).eq(new BN(web3.utils.toWei("10000"))));
         var heoPrice = await lastCampaign.heoPrice.call();
         assert.isTrue(new BN(heoPrice).eq(new BN(web3.utils.toWei("1"))));
+        var metaDataUrl = await lastCampaign.metaDataUrl.call();
+        assert.equal("https://someurl9", metaDataUrl,
+            `Expecting metadata URL to be https://someurl9, but got ${metaDataUrl}`);
         var burntHeo = await lastCampaign.burntHeo.call();
         assert.isTrue(new BN(burntHeo).eq(new BN(web3.utils.toWei("500"))));
         var x = await lastCampaign.profitabilityCoefficient.call();

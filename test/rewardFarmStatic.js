@@ -57,7 +57,7 @@ contract("HEORewardFarm - static", (accounts) => {
         await iPriceOracle.setPrice('0x0000000000000000000000000000000000000000', web3.utils.toWei(""+0.2));
         //deploy campaign for 100 ETH and burn 5 HEO (1 ETH worgh of HEO)
         await iCampaignFactory.createCampaign(web3.utils.toWei("100"), web3.utils.toWei("5"),
-            "0x0000000000000000000000000000000000000000", {from: charityAccount});
+            "0x0000000000000000000000000000000000000000", "https://someurl1", {from: charityAccount});
         var myCampaigns = await iRegistry.getMyCampaigns.call({from: charityAccount});
         var lastCampaign = await HEOCampaign.at(myCampaigns[myCampaigns.length-1]);
         var z = await lastCampaign.getZ.call();
@@ -105,7 +105,7 @@ contract("HEORewardFarm - static", (accounts) => {
         await iPriceOracle.setPrice('0x0000000000000000000000000000000000000000', web3.utils.toWei(""+0.2));
         //deploy campaign for 100 ETH and burn 5 HEO (1 ETH worgh of HEO)
         await iCampaignFactory.createCampaign(web3.utils.toWei("100"), web3.utils.toWei("5"),
-            "0x0000000000000000000000000000000000000000", {from: charityAccount});
+            "0x0000000000000000000000000000000000000000", "https://someurl2", {from: charityAccount});
         var myCampaigns = await iRegistry.getMyCampaigns.call({from: charityAccount});
         var lastCampaign = await HEOCampaign.at(myCampaigns[myCampaigns.length-1]);
         var z = await lastCampaign.getZ.call();
@@ -175,7 +175,7 @@ contract("HEORewardFarm - static", (accounts) => {
         await iPriceOracle.setPrice('0x0000000000000000000000000000000000000000', web3.utils.toWei(""+0.2));
         //deploy campaign for 100 ETH and burn 50 HEO (10 ETH worth of HEO)
         await iCampaignFactory.createCampaign(web3.utils.toWei("100"), web3.utils.toWei("50"),
-            "0x0000000000000000000000000000000000000000", {from: charityAccount});
+            "0x0000000000000000000000000000000000000000", "https://someurl3", {from: charityAccount});
         var myCampaigns = await iRegistry.getMyCampaigns.call({from: charityAccount});
         var lastCampaign = await HEOCampaign.at(myCampaigns[myCampaigns.length-1]);
         var z = await lastCampaign.getZ.call();
@@ -210,9 +210,9 @@ contract("HEORewardFarm - static", (accounts) => {
         await iPriceOracle.setPrice('0x0000000000000000000000000000000000000000', web3.utils.toWei(""+0.2));
         //deploy campaign for 100 ETH and burn 5 HEO (1 ETH worgh of HEO)
         await iCampaignFactory.createCampaign(web3.utils.toWei("100"), web3.utils.toWei("5"),
-            "0x0000000000000000000000000000000000000000", {from: charityAccount});
+            "0x0000000000000000000000000000000000000000", "https://someurl4", {from: charityAccount});
         await iCampaignFactory.createCampaign(web3.utils.toWei("100"), web3.utils.toWei("5"),
-            "0x0000000000000000000000000000000000000000", {from: charityAccount2});
+            "0x0000000000000000000000000000000000000000", "https://someurl5", {from: charityAccount2});
         var myCampaigns = await iRegistry.getMyCampaigns.call({from: charityAccount});
         var campaign1 = await HEOCampaign.at(myCampaigns[myCampaigns.length-1]);
         myCampaigns = await iRegistry.getMyCampaigns.call({from: charityAccount2});
@@ -293,9 +293,9 @@ contract("HEORewardFarm - static", (accounts) => {
         await iPriceOracle.setPrice('0x0000000000000000000000000000000000000000', web3.utils.toWei(""+0.2));
         //deploy campaign for 100 ETH and burn 5 HEO (1 ETH worgh of HEO)
         await iCampaignFactory.createCampaign(web3.utils.toWei("100"), web3.utils.toWei("5"),
-            "0x0000000000000000000000000000000000000000", {from: charityAccount});
+            "0x0000000000000000000000000000000000000000", "https://someurl6", {from: charityAccount});
         await iCampaignFactory.createCampaign(web3.utils.toWei("100"), web3.utils.toWei("5"),
-            "0x0000000000000000000000000000000000000000", {from: charityAccount2});
+            "0x0000000000000000000000000000000000000000", "https://someurl7", {from: charityAccount2});
         var myCampaigns = await iRegistry.getMyCampaigns.call({from: charityAccount});
         var campaign1 = await HEOCampaign.at(myCampaigns[myCampaigns.length-1]);
         myCampaigns = await iRegistry.getMyCampaigns.call({from: charityAccount2});
