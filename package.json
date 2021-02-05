@@ -7,7 +7,8 @@
     "test": "test"
   },
   "scripts": {
-    "test": "npm test"
+    "test": "npm test",
+    "demo":"truffle exec initDemoData.js --network ganache --compile"
   },
   "repository": {
     "type": "git",

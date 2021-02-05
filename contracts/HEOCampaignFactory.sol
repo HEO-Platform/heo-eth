@@ -36,7 +36,7 @@ contract HEOCampaignFactory is IHEOCampaignFactory, Ownable {
     * In order to create a campaign we have to burn beneficiary's HEO.
     * To do that this factory has to be registered in HEOToken._burners map.
     */
-    function createCampaign(uint256 maxAmount, uint256 heoToBurn, address token) public {
+    function createCampaign(uint256 maxAmount, uint256 heoToBurn, address token, string memory metadataUrl) public {
         require(heoToBurn > 0, "HEOCampaignFactory: cannot create a campaign without burning HEO tokens.");
         uint256 price = _priceOracle.getPrice(token);
         require(price > 0, "HEOCampaignFactory: currency at given address is not supported.");
@@ -45,7 +45,7 @@ contract HEOCampaignFactory is IHEOCampaignFactory, Ownable {
 
         //Burn HEO tokens before creating the campaign
         HEOToken(_globalParams.heoToken()).burn(_msgSender(), heoToBurn);
-        HEOCampaign campaign = new HEOCampaign(maxAmount, _msgSender(), x, heoToBurn, price, token, fee);
+        HEOCampaign campaign = new HEOCampaign(maxAmount, _msgSender(), x, heoToBurn, price, token, fee, metadataUrl);
         _registry.registerCampaign(campaign);
         emit CampaignDeployed(address(campaign));
     }

@@ -58,7 +58,6 @@ contract HEORewardFarm is IHEORewardFarm, Context {
         donation.reward = reward;
         uint256 rewardPeriod = _globalParams.rewardPeriod();
         uint256 maxRewardPeriods = _globalParams.maxRewardPeriods();
-        uint256 startPeriod = donation.ts.sub(_globalParams.globalRewardStart()).div(rewardPeriod);
         uint256 rewardPeriods = Math.min(block.timestamp.sub(donation.ts).div(rewardPeriod), maxRewardPeriods);
         if(rewardPeriods == maxRewardPeriods) {
             //donation is fully claimed

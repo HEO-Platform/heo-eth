@@ -20,6 +20,7 @@ contract HEOCampaign is IHEOCampaign, Ownable {
     uint256 private _raisedFunds; //how many wei/wad/tknBits of the target crypto asset this campaign has raised
     uint256 private _heoPrice; //price of 1 HEO in wei/wad/tknBits of the target crypto asset
     bool private _isNative;
+    string private _metaDataUrl; //URL of off-chain metadata file that has tagline, description, images, etc
 
     /**
     * Fundraising ROI (Z) is set by burning beneficiary's HEO tokens.
@@ -27,7 +28,7 @@ contract HEOCampaign is IHEOCampaign, Ownable {
     * Owner of the campaign is the instance of HEOCampaignFactory
     */
     constructor (uint256 maxAmount, address beneficiary, uint256 profitabilityCoefficient,
-        uint256 burntHeo, uint256 heoPrice, address currency, uint256 serviceFee) public {
+        uint256 burntHeo, uint256 heoPrice, address currency, uint256 serviceFee, string memory metaDataUrl) public {
         require(beneficiary != address(0), "HEOCampaign: beneficiary cannot be a zero address.");
         require(maxAmount > 0, "HEOCampaign: _maxAmount cannot be 0.");
         require(burntHeo > 0, "HEOCampaign: _burntHeo cannot be 0.");
@@ -39,6 +40,7 @@ contract HEOCampaign is IHEOCampaign, Ownable {
         _heoPrice = heoPrice;
         _burntHeo = burntHeo;
         _profitabilityCoefficient = profitabilityCoefficient;
+        _metaDataUrl = metaDataUrl;
         if(currency == address(0)) {
             _isNative = true;
         }
@@ -67,6 +69,10 @@ contract HEOCampaign is IHEOCampaign, Ownable {
         require(burntHeo > 0, "HEOCampaign: burntHeo cannot be 0.");
         require(_raisedFunds < _maxAmount, "HEOCampaign: campaign is not active.");
         _burntHeo = _burntHeo.add(burntHeo);
+    }
+
+    function updateMetaDataUrl(string memory metaDataUrl) public onlyOwner {
+        _metaDataUrl = metaDataUrl;
     }
     //getters
 
@@ -124,5 +130,9 @@ contract HEOCampaign is IHEOCampaign, Ownable {
 
     function burntHeo() external view override returns (uint256) {
         return _burntHeo;
+    }
+
+    function metaDataUrl() external view returns (string memory) {
+        return _metaDataUrl;
     }
 }
