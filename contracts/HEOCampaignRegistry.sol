@@ -19,6 +19,11 @@ contract HEOCampaignRegistry is IHEOCampaignRegistry, Ownable {
     */
     mapping(address => address) private _campaignsToOwners;
 
+    /*
+    * List of all campaigns
+    */
+    address[] private _campaigns;
+
     //use interface, so that we can replace the factory contract
     IHEOCampaignFactory private _factory;
 
@@ -49,10 +54,19 @@ contract HEOCampaignRegistry is IHEOCampaignRegistry, Ownable {
         require(address(_factory) == _msgSender(), "HEOCampaignRegistry: caller must be the authorized instance of IHEOCampaignFactory.");
         _ownersToCampaigns[campaign.beneficiary()].push(address(campaign));
         _campaignsToOwners[address(campaign)] = campaign.beneficiary();
+        _campaigns.push(address(campaign));
     }
 
-    function getMyCampaigns() public view returns (address[] memory) {
+    function myCampaigns() public view returns (address[] memory) {
         return _ownersToCampaigns[_msgSender()];
+    }
+
+    function allCampaigns() public view returns (address[] memory) {
+        return _campaigns;
+    }
+
+    function totalCampaigns() public view returns (uint256) {
+        return _campaigns.length;
     }
 
     function getOwner(IHEOCampaign campaign) external view override returns (address) {

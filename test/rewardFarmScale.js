@@ -59,7 +59,7 @@ contract("HEORewardFarm - scale", (accounts) => {
         }
 
         //Make donations
-        var myCampaigns = await iRegistry.getMyCampaigns.call({from: charityAccount});
+        var myCampaigns = await iRegistry.myCampaigns.call({from: charityAccount});
         for(var i=0; i < myCampaigns.length; i++) {
             var campaign = await HEOCampaign.at(myCampaigns[i]);
             await campaign.donateNative({from: investorAccount1, value: web3.utils.toWei("1", "ether")});

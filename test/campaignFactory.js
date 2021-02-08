@@ -33,14 +33,18 @@ contract("HEOCampaignFactory", (accounts) => {
         //charityAccount should be able to start a campaign
         var charityBalance = web3.utils.fromWei(await iToken.balanceOf.call(charityAccount));
         console.log(`Charity account has ${charityBalance} HEO`);
-        var myCampaigns = await iRegistry.getMyCampaigns.call({from: charityAccount});
+        var myCampaigns = await iRegistry.myCampaigns.call({from: charityAccount});
         var countBefore = myCampaigns.length;
         assert.equal(0, countBefore, "Expecting to have 0 campaigns registered");
+        var totalCampaignsBefore = (await iRegistry.totalCampaigns.call()).toNumber();
+        assert.equal(0, totalCampaignsBefore, "Should have one campaign registered in total.");
         await iCampaignFactory.createCampaign(web3.utils.toWei("100"), web3.utils.toWei("1"),
             "0x0000000000000000000000000000000000000000", "https://someurl1", {from: charityAccount});
-        myCampaigns = await iRegistry.getMyCampaigns.call({from: charityAccount});
+        myCampaigns = await iRegistry.myCampaigns.call({from: charityAccount});
+        var totalCampaignsAfter = (await iRegistry.totalCampaigns.call()).toNumber();
         var countAfter = myCampaigns.length;
         assert.equal(1, countAfter, "Should have one campaign registered.");
+        assert.equal(1, totalCampaignsAfter, "Should have one campaign registered in total.");
         var lastCampaign = myCampaigns[0];
         assert.isNotNull(lastCampaign, "Last campaign address is null");
         lastCampaign = await HEOCampaign.at(lastCampaign);
@@ -125,7 +129,7 @@ contract("HEOCampaignFactory", (accounts) => {
         //charityAccount should be able to start a campaign
         var balanceBefore = await iToken.balanceOf.call(charityAccount);
         assert.isTrue(web3.utils.fromWei(balanceBefore) > 0.5, "Expecting " + balanceBefore + " to be > 0.5");
-        var myCampaigns = await iRegistry.getMyCampaigns.call({from: charityAccount});
+        var myCampaigns = await iRegistry.myCampaigns.call({from: charityAccount});
         var countBefore = myCampaigns.length;
         var tx = await iCampaignFactory.createCampaign(web3.utils.toWei("100"), web3.utils.toWei("0.5"),
             "0x0000000000000000000000000000000000000000", "https://someurl6", {from: charityAccount});
@@ -137,7 +141,7 @@ contract("HEOCampaignFactory", (accounts) => {
         assert.isNotNull(deployEvent);
         assert.isNotNull(deployEvent.args);
         assert.isNotNull(deployEvent.args.campaignAddress, "Expecting campaignAddress argument in deploy event.");
-        myCampaigns = await iRegistry.getMyCampaigns.call({from: charityAccount});
+        myCampaigns = await iRegistry.myCampaigns.call({from: charityAccount});
         var countAfter = myCampaigns.length;
         assert.equal(countBefore + 1, countAfter, "Should have one more campaign registered.");
         var lastCampaign = await HEOCampaign.at(deployEvent.args.campaignAddress);
@@ -173,7 +177,7 @@ contract("HEOCampaignFactory", (accounts) => {
         //charityAccount should be able to start a campaign
         var balanceBefore = await iToken.balanceOf.call(charityAccount);
         assert.isTrue(web3.utils.fromWei(balanceBefore) >= 1000, "Expecting " + balanceBefore + " to be 1000+.");
-        var myCampaigns = await iRegistry.getMyCampaigns.call({from: charityAccount});
+        var myCampaigns = await iRegistry.myCampaigns.call({from: charityAccount});
         var countBefore = myCampaigns.length;
         var tx = await iCampaignFactory.createCampaign(web3.utils.toWei("10000"), web3.utils.toWei("1000"),
             "0x0000000000000000000000000000000000000000", "https://someurl7", {from: charityAccount});
@@ -185,7 +189,7 @@ contract("HEOCampaignFactory", (accounts) => {
         assert.isNotNull(deployEvent);
         assert.isNotNull(deployEvent.args);
         assert.isNotNull(deployEvent.args.campaignAddress, "Expecting campaignAddress argument in deploy event.");
-        myCampaigns = await iRegistry.getMyCampaigns.call({from: charityAccount});
+        myCampaigns = await iRegistry.myCampaigns.call({from: charityAccount});
         var countAfter = myCampaigns.length;
         assert.equal(countBefore + 1, countAfter, "Should have one more campaign registered.");
         var lastCampaign = await HEOCampaign.at(deployEvent.args.campaignAddress);
@@ -223,7 +227,7 @@ contract("HEOCampaignFactory", (accounts) => {
         //charityAccount should be able to start a campaign
         var balanceBefore = await iToken.balanceOf.call(charityAccount);
         assert.isTrue(web3.utils.fromWei(balanceBefore) >= 1000, "Expecting " + balanceBefore + " to be 1000+.");
-        var myCampaigns = await iRegistry.getMyCampaigns.call({from: charityAccount});
+        var myCampaigns = await iRegistry.myCampaigns.call({from: charityAccount});
         var countBefore = myCampaigns.length;
         var tx = await iCampaignFactory.createCampaign(web3.utils.toWei("10000"), web3.utils.toWei("300"),
             "0x0000000000000000000000000000000000000000", "https://someurl8", {from: charityAccount});
@@ -235,7 +239,7 @@ contract("HEOCampaignFactory", (accounts) => {
         assert.isNotNull(deployEvent);
         assert.isNotNull(deployEvent.args);
         assert.isNotNull(deployEvent.args.campaignAddress, "Expecting campaignAddress argument in deploy event.");
-        myCampaigns = await iRegistry.getMyCampaigns.call({from: charityAccount});
+        myCampaigns = await iRegistry.myCampaigns.call({from: charityAccount});
         var countAfter = myCampaigns.length;
         assert.equal(countBefore + 1, countAfter, "Should have one more campaign registered.");
         var lastCampaign = await HEOCampaign.at(deployEvent.args.campaignAddress);
@@ -322,8 +326,9 @@ contract("HEOCampaignFactory", (accounts) => {
         //charityAccount should be able to start a campaign
         var balanceBefore = await iToken.balanceOf.call(charityAccount);
         assert.isTrue(web3.utils.fromWei(balanceBefore) >= 1000, "Expecting " + balanceBefore + " to be 1000+.");
-        var myCampaigns = await iRegistry.getMyCampaigns.call({from: charityAccount});
+        var myCampaigns = await iRegistry.myCampaigns.call({from: charityAccount});
         var countBefore = myCampaigns.length;
+        var totalCampaignsBefore = (await iRegistry.totalCampaigns.call()).toNumber();
         var tx = await iCampaignFactory.createCampaign(web3.utils.toWei("10000"), web3.utils.toWei("500"),
             "0x0000000000000000000000000000000000000000", "https://someurl9", {from: charityAccount});
         assert.isNotNull(tx, "Transaction should not be null.");
@@ -334,9 +339,11 @@ contract("HEOCampaignFactory", (accounts) => {
         assert.isNotNull(deployEvent);
         assert.isNotNull(deployEvent.args);
         assert.isNotNull(deployEvent.args.campaignAddress, "Expecting campaignAddress argument in deploy event.");
-        myCampaigns = await iRegistry.getMyCampaigns.call({from: charityAccount});
+        myCampaigns = await iRegistry.myCampaigns.call({from: charityAccount});
+        var totalCampaignsAfter = (await iRegistry.totalCampaigns.call()).toNumber();
         var countAfter = myCampaigns.length;
         assert.equal(countBefore + 1, countAfter, "Should have one more campaign registered.");
+        assert.equal(totalCampaignsBefore + 1, totalCampaignsAfter, "Should have one more campaign registered total.");
         var lastCampaign = await HEOCampaign.at(deployEvent.args.campaignAddress);
         assert.isNotNull(lastCampaign, "Deployed HEOCampaign should not be null.");
         var maxAmount = await lastCampaign.maxAmount.call();
