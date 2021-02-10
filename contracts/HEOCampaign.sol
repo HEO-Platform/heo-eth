@@ -21,6 +21,7 @@ contract HEOCampaign is IHEOCampaign, Ownable {
     uint256 private _heoPrice; //price of 1 HEO in wei/wad/tknBits of the target crypto asset
     bool private _isNative;
     string private _metaDataUrl; //URL of off-chain metadata file that has tagline, description, images, etc
+    address private _currency; //Address of the token accepted by this campaign
 
     /**
     * Fundraising ROI (Z) is set by burning beneficiary's HEO tokens.
@@ -44,6 +45,7 @@ contract HEOCampaign is IHEOCampaign, Ownable {
         if(currency == address(0)) {
             _isNative = true;
         }
+        _currency = currency;
     }
 
     /**
@@ -77,10 +79,26 @@ contract HEOCampaign is IHEOCampaign, Ownable {
     //getters
 
     /**
+    * Address of the token accepted by this campaign. Zero address is used for native
+    * coin of the underlying blockchain.
+    */
+    function currency() external view override returns (address) {
+        return _currency;
+    }
+
+    /**
     * How many units of target currency can be raised by this campaign.
     */
     function maxAmount() external view override returns (uint256) {
         return _maxAmount;
+    }
+
+
+    /**
+    * How many units of target currency have been raised by this campaign.
+    */
+    function raisedAmount() external view override returns (uint256) {
+        return _raisedFunds;
     }
 
     /**

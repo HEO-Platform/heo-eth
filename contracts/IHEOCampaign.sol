@@ -9,4 +9,6 @@ interface IHEOCampaign {
     function heoPrice() external view returns (uint256);
     function beneficiary() external view returns (address);
     function burntHeo() external view returns (uint256);
+    function raisedAmount() external view returns (uint256);
+    function currency() external view returns (address);
 }

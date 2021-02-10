@@ -42,7 +42,7 @@ contract("HEORewardFarm - scale", (accounts) => {
         await timeMachine.advanceTimeAndBlock(2);
     });
 
-    it(`Should calculate rewards from ${MAX_CAMPAIGNS*2} investments into ${MAX_CAMPAIGNS} campaigns`, async () => {
+    it(`Should calculate rewards from ${MAX_CAMPAIGNS*2} donations into ${MAX_CAMPAIGNS} campaigns`, async () => {
         //test conditions
         await iGlobalParams.setRewardPeriod(REWARD_PERIOD);
         await iGlobalParams.setMaxRewardPeriods(365);
@@ -60,13 +60,16 @@ contract("HEORewardFarm - scale", (accounts) => {
 
         //Make donations
         var myCampaigns = await iRegistry.myCampaigns.call({from: charityAccount});
-        for(var i=0; i < myCampaigns.length; i++) {
-            var campaign = await HEOCampaign.at(myCampaigns[i]);
+        for(let i=0; i < myCampaigns.length; i++) {
+            let campaign = await HEOCampaign.at(myCampaigns[i]);
             await campaign.donateNative({from: investorAccount1, value: web3.utils.toWei("1", "ether")});
+            let raisedAmount = await campaign.raisedAmount.call();
+            assert.isTrue(new BN(raisedAmount).eq(new BN(web3.utils.toWei("1"))),
+                `Expected raisedAmount to be 1 ETH, but got ${raisedAmount.toString()}`);
         }
 
         //Set prices and advance time
-        for(var i=0;i<180;i++) {
+        for(let i=0;i<180;i++) {
             var blockNumber = await web3.eth.getBlockNumber();
             var chainTimeBefore = (await web3.eth.getBlock(blockNumber)).timestamp;
             await iPriceOracle.setPrice('0x0000000000000000000000000000000000000000', web3.utils.toWei(""+0.2));
@@ -74,9 +77,12 @@ contract("HEORewardFarm - scale", (accounts) => {
         }
 
         //Make more donations
-        for(var i=0; i < myCampaigns.length; i++) {
-            var campaign = await HEOCampaign.at(myCampaigns[i]);
+        for(let i=0; i < myCampaigns.length; i++) {
+            let campaign = await HEOCampaign.at(myCampaigns[i]);
             await campaign.donateNative({from: investorAccount1, value: web3.utils.toWei("1", "ether")});
+            let raisedAmount = await campaign.raisedAmount.call();
+            assert.isTrue(new BN(raisedAmount).eq(new BN(web3.utils.toWei("2"))),
+                `Expected raisedAmount to be 2 ETH, but got ${raisedAmount.toString()}`);
         }
 
         //Set prices and advance time

@@ -55,6 +55,11 @@ contract("HEOCampaignFactory", (accounts) => {
         assert.isTrue(new BN(heoPrice).eq(new BN(web3.utils.toWei("1"))), "Expected HEO price to be 1, but got " + heoPrice.toString());
         var burntHeo = await lastCampaign.burntHeo.call();
         assert.isTrue(new BN(burntHeo).eq(new BN(web3.utils.toWei("1"))), "Expected burnt amount to be 1, but got " + burntHeo.toString());
+        var raisedAmount = await lastCampaign.raisedAmount.call();
+        assert.isTrue(new BN(raisedAmount).eq(new BN(web3.utils.toWei("0"))), "Expected raisedAmount to be 0, but got " + raisedAmount.toString());
+        var targetToken = await lastCampaign.currency.call();
+        assert.equal("0x0000000000000000000000000000000000000000", targetToken,
+            `Expected campaign currency address to be 0x0000000000000000000000000000000000000000, but got ${targetToken}`);
         var x = await lastCampaign.profitabilityCoefficient.call();
         assert.isTrue(new BN(x).eq(new BN("20")), "Expecting X = 20, but found " + x);
         var z = await lastCampaign.getZ.call();

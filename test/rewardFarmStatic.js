@@ -201,7 +201,7 @@ contract("HEORewardFarm - static", (accounts) => {
             "Expecting reward of 10 HEO, but got " + myReward.toString());
     });
 
-    it("Should calculate rewards from 2 investments", async () => {
+    it("Should calculate rewards from 2 donations", async () => {
         //test conditions
         await iGlobalParams.setRewardPeriod(REWARD_PERIOD);
         await iGlobalParams.setMaxRewardPeriods(12);
@@ -283,7 +283,7 @@ contract("HEORewardFarm - static", (accounts) => {
             `Expecting reward of 1.5 HEO, but got ${myReward1.toString()} and ${myReward2.toString()}`);
     });
 
-    it("Should calculate rewards from 2 investments and claim part of the reward before making the second donation",
+    it("Should calculate rewards from 2 donations and claim part of the reward before making the second donation",
         async () => {
         //test conditions
         await iGlobalParams.setRewardPeriod(REWARD_PERIOD);
@@ -298,6 +298,9 @@ contract("HEORewardFarm - static", (accounts) => {
             "0x0000000000000000000000000000000000000000", "https://someurl7", {from: charityAccount2});
         var myCampaigns = await iRegistry.myCampaigns.call({from: charityAccount});
         var campaign1 = await HEOCampaign.at(myCampaigns[myCampaigns.length-1]);
+        var raisedAmount = await campaign1.raisedAmount.call();
+        assert.isTrue(new BN(raisedAmount).eq(new BN(web3.utils.toWei("0"))),
+            `Expected raisedAmount to be 0, but got ${raisedAmount.toString()}`);
         myCampaigns = await iRegistry.myCampaigns.call({from: charityAccount2});
         var campaign2 = await HEOCampaign.at(myCampaigns[myCampaigns.length-1]);
 
@@ -306,6 +309,9 @@ contract("HEORewardFarm - static", (accounts) => {
         var chainTimeBefore = (await web3.eth.getBlock(blockNumber)).timestamp;
         await campaign1.donateNative({from: investorAccount5, value: web3.utils.toWei("1", "ether")});
 
+        raisedAmount = await campaign1.raisedAmount.call();
+        assert.isTrue(new BN(raisedAmount).eq(new BN(web3.utils.toWei("1"))),
+            `Expected raisedAmount to be 1 ETH, but got ${raisedAmount.toString()}`);
         //Advance time
         blockNumber = await web3.eth.getBlockNumber();
         var chainTimeAfter = (await web3.eth.getBlock(blockNumber)).timestamp;
@@ -320,7 +326,9 @@ contract("HEORewardFarm - static", (accounts) => {
         blockNumber = await web3.eth.getBlockNumber();
         chainTimeBefore = (await web3.eth.getBlock(blockNumber)).timestamp;
         await campaign2.donateNative({from: investorAccount5, value: web3.utils.toWei("1", "ether")});
-
+        raisedAmount = await campaign2.raisedAmount.call();
+        assert.isTrue(new BN(raisedAmount).eq(new BN(web3.utils.toWei("1"))),
+            `Expected raisedAmount to be 1 ETH, but got ${raisedAmount.toString()}`);
         //Advance time again
         blockNumber = await web3.eth.getBlockNumber();
         chainTimeAfter = (await web3.eth.getBlock(blockNumber)).timestamp;
