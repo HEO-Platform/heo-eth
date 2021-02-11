@@ -105,8 +105,7 @@ contract HEOCampaign is IHEOCampaign, Ownable {
     * Donation Yield (Y) based on formula Y = X/Z
     */
     function donationYield() external view override returns (uint256) {
-        uint8 decimals = HEOGlobalParameters(HEOCampaignFactory(owner()).globalParams()).yDecimals();
-        return _profitabilityCoefficient.mul(uint256(10)**uint256(decimals)).div(getZ());
+        return _profitabilityCoefficient.mul(uint256(10)**uint256(18)).div(getZ());
     }
 
     /**

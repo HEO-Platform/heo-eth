@@ -160,7 +160,6 @@ contract("HEOCampaignFactory", (accounts) => {
         var x = await lastCampaign.profitabilityCoefficient.call();
         assert.isTrue(new BN(x).eq(new BN("20")), "Expecting X = 20, but found " + x);
         var decimals = await iToken.decimals.call();
-        var yieldDecimals = await iGlobalParams.yDecimals.call();
         assert.equal(decimals, 18, "Expecting 18 decimals in HEOToken.");
         var expectedZ = maxAmount.mul(new BN("10").pow(decimals)).div(burntHeo).div(heoPrice);
         var z = await lastCampaign.getZ.call();
@@ -169,11 +168,10 @@ contract("HEOCampaignFactory", (accounts) => {
         assert.isTrue(balanceBefore.sub(balanceAfter).eq(new BN(web3.utils.toWei("0.5"))),
             balanceBefore.toString() + "-" + balanceAfter.toString() + " != " + web3.utils.toWei("0.5"));
         var y = await lastCampaign.donationYield.call();
-        /*console.log("Z " + z);
+        console.log("Z " + z);
         console.log("Y " + y);
-        console.log("Donation yield: " + y.toNumber()/10**yieldDecimals.toNumber());*/
-        assert.isTrue(new BN("20").mul(new BN("10").pow(yieldDecimals)).div(z).eq(y),
-            "Expecting Y to be 10000 but got " + y);
+        console.log(`Donation yield: ${web3.utils.fromWei(y)}`);
+        assert.isTrue(new BN(web3.utils.toWei("20")).div(z).eq(y), `Expecting Y to be 20, but got ${y.toString()}`);
     });
 
     it("Should deploy a campaign for raising 10,000 ETH with Y = 2, Z = 10 by burning 1000 HEO", async () => {
@@ -208,7 +206,6 @@ contract("HEOCampaignFactory", (accounts) => {
         var x = await lastCampaign.profitabilityCoefficient.call();
         assert.isTrue(new BN(x).eq(new BN("20")), "Expecting X = 20, but found " + x);
         var decimals = await iToken.decimals.call();
-        var yieldDecimals = await iGlobalParams.yDecimals.call();
         assert.equal(decimals, 18, "Expecting 18 decimals in HEOToken.");
         var expectedZ = maxAmount.mul(new BN("10").pow(decimals)).div(burntHeo).div(heoPrice);
         var z = await lastCampaign.getZ.call();
@@ -217,11 +214,10 @@ contract("HEOCampaignFactory", (accounts) => {
         assert.isTrue(balanceBefore.sub(balanceAfter).eq(new BN(web3.utils.toWei("1000"))),
             balanceBefore.toString() + "-" + balanceAfter.toString() + " != " + web3.utils.toWei("1000"));
         var y = await lastCampaign.donationYield.call();
-        /*console.log("Z " + z);
+        assert.isTrue(new BN(web3.utils.toWei("20")).div(z).eq(y), `Expecting Y to be 20, but got ${y.toString()}`);
+        console.log("Z " + z);
         console.log("Y " + y);
-        console.log("Donation yield: " + y.toNumber()/10**yieldDecimals.toNumber());*/
-        assert.isTrue(new BN("20").mul(new BN("10").pow(yieldDecimals)).div(z).eq(y),
-            "Expecting Y to be 200000 but got " + y);
+        console.log(`Donation yield: ${web3.utils.fromWei(y)}`);
     });
 
     it("Should enforce restrictions on changing Donation Yield", async() => {
