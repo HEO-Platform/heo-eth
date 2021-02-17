@@ -36,7 +36,7 @@ contract HEOCampaign is IHEOCampaign, Ownable, ReentrancyGuard {
         uint256 burntHeo, uint256 heoPrice, address currency, uint256 serviceFee, string memory metaDataUrl) public {
         require(beneficiary != address(0), "HEOCampaign: beneficiary cannot be a zero address.");
         require(maxAmount > 0, "HEOCampaign: _maxAmount cannot be 0.");
-        require(burntHeo > 0, "HEOCampaign: _burntHeo cannot be 0.");
+        //require(burntHeo > 0, "HEOCampaign: _burntHeo cannot be 0.");
         require(heoPrice > 0, "HEOCampaign: HEO price cannot be 0.");
 
         _maxAmount = maxAmount;
@@ -121,6 +121,9 @@ contract HEOCampaign is IHEOCampaign, Ownable, ReentrancyGuard {
     * Donation Yield (Y) based on formula Y = X/Z
     */
     function donationYield() external view override returns (uint256) {
+        if(_burntHeo == 0) {
+            return 0;
+        }
         return _profitabilityCoefficient.mul(uint256(10)**uint256(18)).div(getZ());
     }
 
@@ -136,6 +139,9 @@ contract HEOCampaign is IHEOCampaign, Ownable, ReentrancyGuard {
     * by value of HEO burnt to activate the campaign.
     */
     function getZ() public view returns (uint256) {
+        if(_burntHeo == 0) {
+            return 0;
+        }
         uint8 decimals = HEOToken(HEOGlobalParameters(HEOCampaignFactory(owner()).globalParams()).heoToken()).decimals();
         return _maxAmount.mul(uint256(10)**uint256(decimals)).div(_burntHeo).div(_heoPrice);
     }

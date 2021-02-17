@@ -67,22 +67,43 @@ contract("HEOCampaignFactory", (accounts) => {
         var expectedZ = maxAmount.mul(new BN("10").pow(decimals)).div(burntHeo).div(heoPrice);
         assert.isTrue(z.eq(expectedZ), "Expecting Z to be " + expectedZ.toString() + ", but got " + z.toString());
         var y = await lastCampaign.donationYield.call();
-        /*console.log("Z " + z);
-        console.log("Y " + y);
-        console.log("Donation yield: " + y.toNumber()/10**yieldDecimals.toNumber())*/
         assert.isTrue(new BN("200000000000000000").eq(y), "Expecting Y to be 200000000000000000 but got " + y);
     });
 
-    it("Should fail to deploy campaign w/o burning HEO", async () => {
-        let userAccount = accounts[2];
+    it("Should be able to deploy campaign w/o burning HEO", async () => {
+        let charityAccount = accounts[2];
         try {
+            var myCampaigns = await iRegistry.myCampaigns.call({from: charityAccount});
+            var countBefore = myCampaigns.length;
             await iCampaignFactory.createCampaign(web3.utils.toWei("100"), web3.utils.toWei("0"),
                 "0x0000000000000000000000000000000000000000", "https://someurl1",
-                {from: userAccount});
-            assert.fail("Should throw an exception trying to deploy a campaign w/o burning HEO");
+                {from: charityAccount});
+            myCampaigns = await iRegistry.myCampaigns.call({from: charityAccount});
+            var countAfter = myCampaigns.length;
+            assert.equal(countBefore+1, countAfter, "Should have one more campaign registered.");
+            var lastCampaign = myCampaigns[countAfter-1];
+            lastCampaign = await HEOCampaign.at(lastCampaign);
+            assert.isNotNull(lastCampaign, "Last campaign is null");
+            var maxAmount = await lastCampaign.maxAmount.call();
+            assert.isTrue(new BN(maxAmount).eq(new BN(web3.utils.toWei("100"))), "Expected maxAmount to be 100, but got " + maxAmount.toString());
+            var heoPrice = await lastCampaign.heoPrice.call();
+            assert.isTrue(new BN(heoPrice).eq(new BN(web3.utils.toWei("1"))), "Expected HEO price to be 1, but got " + heoPrice.toString());
+            var burntHeo = await lastCampaign.burntHeo.call();
+            assert.isTrue(new BN(burntHeo).eq(new BN(web3.utils.toWei("0"))), "Expected burnt amount to be 0, but got " + burntHeo.toString());
+            var raisedAmount = await lastCampaign.raisedAmount.call();
+            assert.isTrue(new BN(raisedAmount).eq(new BN(web3.utils.toWei("0"))), "Expected raisedAmount to be 0, but got " + raisedAmount.toString());
+            var targetToken = await lastCampaign.currency.call();
+            assert.equal("0x0000000000000000000000000000000000000000", targetToken,
+                `Expected campaign currency address to be 0x0000000000000000000000000000000000000000, but got ${targetToken}`);
+            var x = await lastCampaign.profitabilityCoefficient.call();
+            assert.isTrue(new BN(x).eq(new BN("20")), "Expecting X = 20, but found " + x);
+            var z = await lastCampaign.getZ.call();
+            assert.isTrue(z.eq(new BN("0")), "Expecting Z to 0, but got " + z.toString());
+            var y = await lastCampaign.donationYield.call();
+            assert.isTrue(new BN("0").eq(y), "Expecting Y to be 0 but got " + y);
         } catch (err) {
-            assert.equal(err.reason, "HEOCampaignFactory: cannot create a campaign without burning HEO tokens.",
-                "Wrong error message: " + err.reason);
+            console.log(err);
+            assert.fail("Should not throw an exception when deploying a campaign w/o burning HEO.");
         }
     });
 

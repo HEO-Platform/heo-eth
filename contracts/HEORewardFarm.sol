@@ -80,7 +80,9 @@ contract HEORewardFarm is IHEORewardFarm, Context {
         if(donation.active == 0) {
             return rewardHEO; //this donation is fully claimed
         }
-
+        if(donation.campaign.donationYield() == 0) {
+            return 0;
+        }
         uint256 startPeriod = donation.ts.sub(_globalParams.globalRewardStart()).div(rewardPeriod);
         uint256 rewardPeriods = Math.min(block.timestamp.sub(donation.ts).div(rewardPeriod), maxRewardPeriods);
         //reward per period in tknBits/wei of donation currency identified by donation.token
