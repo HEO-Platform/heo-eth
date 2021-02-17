@@ -1,5 +1,6 @@
 .idea
 .openzeppelin
+.secret
 build
 node_modules
 package-lock.json
