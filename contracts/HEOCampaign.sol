@@ -1,19 +1,23 @@
 pragma solidity >=0.6.1;
 
 import "./IHEOCampaign.sol";
+import "openzeppelin-solidity/contracts/token/ERC20/ERC20.sol";
+import "openzeppelin-solidity/contracts/token/ERC20/SafeERC20.sol";
 import "openzeppelin-solidity/contracts/access/Ownable.sol";
 import "openzeppelin-solidity/contracts/math/SafeMath.sol";
+import "openzeppelin-solidity/contracts/utils/ReentrancyGuard.sol";
 import "./HEOPriceOracle.sol";
 import "./IHEORewardFarm.sol";
 import "./HEOCampaignFactory.sol";
 import "./HEOGlobalParameters.sol";
 import "./HEOToken.sol";
 
-contract HEOCampaign is IHEOCampaign, Ownable {
+contract HEOCampaign is IHEOCampaign, Ownable, ReentrancyGuard {
     using SafeMath for uint256;
+    using SafeERC20 for ERC20;
 
     uint256 private _maxAmount; //campaign limit in wei/wad/tknBits of the target crypto asset
-    address private _beneficiary;
+    address payable private _beneficiary;
     uint256 private _profitabilityCoefficient; //X - set by the platform
     uint256 private _serviceFee;
     uint256 private _burntHeo; //amount of burnt HEO in tknBits
@@ -28,7 +32,7 @@ contract HEOCampaign is IHEOCampaign, Ownable {
     * This property is determined by the formula Z = maxAmount/(burntHeo * heoPrice).
     * Owner of the campaign is the instance of HEOCampaignFactory
     */
-    constructor (uint256 maxAmount, address beneficiary, uint256 profitabilityCoefficient,
+    constructor (uint256 maxAmount, address payable beneficiary, uint256 profitabilityCoefficient,
         uint256 burntHeo, uint256 heoPrice, address currency, uint256 serviceFee, string memory metaDataUrl) public {
         require(beneficiary != address(0), "HEOCampaign: beneficiary cannot be a zero address.");
         require(maxAmount > 0, "HEOCampaign: _maxAmount cannot be 0.");
@@ -57,7 +61,19 @@ contract HEOCampaign is IHEOCampaign, Ownable {
         uint256 raisedFunds = _raisedFunds.add(msg.value);
         require(raisedFunds <= _maxAmount, "HEOCampaign: this contribution will exceed maximum allowed for this campaign.");
         _raisedFunds = raisedFunds;
+        _beneficiary.transfer(msg.value);
         IHEORewardFarm(HEOCampaignFactory(owner()).rewardFarm()).addDonation(_msgSender(), msg.value, address(0));
+    }
+
+    function donateERC20(uint256 amount) public nonReentrant {
+        require(!_isNative, "HEOCampaign: this campaign does not accept ERC-20 tokens.");
+        require(amount > 0, "HEOCampaign: must send non-zero amount of ERC-20 tokens.");
+        ERC20 paymentToken = ERC20(_currency);
+        uint256 raisedFunds = _raisedFunds.add(amount);
+        require(raisedFunds <= _maxAmount, "HEOCampaign: this contribution will exceed maximum allowed for this campaign.");
+        _raisedFunds = raisedFunds;
+        paymentToken.safeTransferFrom(msg.sender, address(_beneficiary), amount);
+        IHEORewardFarm(HEOCampaignFactory(owner()).rewardFarm()).addDonation(_msgSender(), amount, _currency);
     }
 
     receive() external payable {

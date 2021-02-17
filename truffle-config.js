@@ -24,7 +24,7 @@ module.exports = {
   //
     compilers: {
         solc: {
-            version: "0.6.1",
+            version: "0.6.2",
                 // Can also be set to "native" to use a native solc
             docker: false, // Use a version obtained through docker
             parser: "solcjs", // Leverages solc-js purely for speedy parsing
@@ -43,7 +43,7 @@ module.exports = {
             defaultEtherBalance: 500
         },
         testnetb: {
-            provider: () => new HDWalletProvider(mnemonic, `https://data-seed-prebsc-1-s1.binance.org:8545`, 1),
+            provider: () => new HDWalletProvider(mnemonic, `https://data-seed-prebsc-1-s1.binance.org:8545`, 0),
             network_id: 97,
             confirmations: 10,
             timeoutBlocks: 200,
