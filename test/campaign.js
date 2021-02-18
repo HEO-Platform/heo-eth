@@ -41,7 +41,7 @@ contract("HEOCampaign", (accounts) => {
         await timeMachine.advanceTimeAndBlock(2);
     });
 
-    it("Should disallow ETH donations when campaign is set to accept stable a coin.", async() => {
+    it("Should disallow ETH donations when campaign is set to accept a stable-coin.", async() => {
         //test conditions
         var charityCoinBalanceBefore = await iTestCoin.balanceOf.call(charityAccount);
         await iGlobalParams.setRewardPeriod(REWARD_PERIOD);
