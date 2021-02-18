@@ -8,6 +8,7 @@
   },
   "scripts": {
     "test": "npm test",
+    "web-build": "truffle exec buildForWeb.js --network ganache",
     "demo": "truffle exec initDemoData.js --network ganache"
   },
   "repository": {
