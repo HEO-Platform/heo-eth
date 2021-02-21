@@ -101,5 +101,7 @@ contract("HEOPublicSale", (accounts) => {
         var chBA = parseInt(web3.utils.fromWei(await iToken.balanceOf.call(charityAccount)));
         assert.equal(cCBB-10, cCBA, `Charity stablecoin balance changed from ${cCBB} to ${cCBA}`);
         assert.equal(cHBB+1, chBA, `Charity coin balance changed from ${cHBB} to ${chBA}`);
+        const saleToken = await iPublicSale.currency();
+        assert.equal(iTestCoin.address, saleToken, `Expecting currency of public sale to be ${iTestCoin.address}, but found ${saleToken}`);
     });
 });

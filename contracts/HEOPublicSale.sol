@@ -42,4 +42,11 @@ contract HEOPublicSale is Ownable, ReentrancyGuard {
         HEOToken(_globalParams.heoToken()).safeTransfer(_msgSender(), amountInTokenBits);
         emit TokensSold(_msgSender(), amountInTokenBits, cost);
     }
+
+    /**
+    * Address of the token accepted by this sale
+    */
+    function currency() external view returns (address) {
+        return _currency;
+    }
 }
