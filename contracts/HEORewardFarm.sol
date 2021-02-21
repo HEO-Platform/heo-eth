@@ -7,6 +7,7 @@ import "./HEOPriceOracle.sol";
 import "./IHEOCampaign.sol";
 import "./IHEOCampaignRegistry.sol";
 import "./IHEORewardFarm.sol";
+import "./HEOToken.sol";
 
 contract HEORewardFarm is IHEORewardFarm, Context {
     using SafeMath for uint256;
