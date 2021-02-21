@@ -1,19 +1,19 @@
 const HEOToken = artifacts.require("HEOToken");
 const HEOManualDistribution = artifacts.require("HEOManualDistribution");
-
+var BN = web3.utils.BN;
 contract('HEOManualDistribution', (accounts) => {
     it('should initialize correctly', async () => {
         let privateSaleInstance = await HEOManualDistribution.deployed();
         let privateSaleLimit = await privateSaleInstance.limit.call();
-        assert.equal(privateSaleLimit, 85000, "Expecting private sale limit to be set to 85000");
+        assert.equal(privateSaleLimit,  web3.utils.toWei("85000"), "Expecting private sale limit to be set to 85000");
         var distributed = await privateSaleInstance.distributed.call();
         assert.equal(distributed, 0, "Expecting number of tokens sold on private sale to be 0");
         var contractName = await privateSaleInstance.name.call();
         assert.equal("Private Sale", contractName, "Wrong contract name: " + contractName);
 
-        let bountyInstance = await HEOManualDistribution.new(5000, 0, "Bounty", HEOToken.address)
+        let bountyInstance = await HEOManualDistribution.new(web3.utils.toWei("5000"), 0, "Bounty", HEOToken.address)
         let bountyLimit = await bountyInstance.limit.call();
-        assert.equal(bountyLimit, 5000, "Expecting bounty limit to be set to 5000");
+        assert.equal(new BN(bountyLimit).toString(), web3.utils.toWei("5000").toString(), "Expecting bounty limit to be set to " + web3.utils.toWei("5000"));
         distributed = await bountyInstance.distributed.call();
         assert.equal(distributed, 0, "Expecting number of tokens distributed for bounty to be 0");
         contractName = await bountyInstance.name.call();
@@ -24,12 +24,13 @@ contract('HEOManualDistribution', (accounts) => {
         let ownerAccount = accounts[0];
         let investorAccount = accounts[1];
         let hackerAccount = accounts[2];
-        let privateSaleInstance = await HEOManualDistribution.deployed();
+        let privateSaleInstance = await HEOManualDistribution.new(web3.utils.toWei("85000"), 0, "Test", HEOToken.address)
         let heoTokenInstance = await HEOToken.deployed();
         try {
             await privateSaleInstance.distribute(investorAccount, 10);
             assert.fail("Should throw an error when trying to mint tokens as non-minter")
         } catch (err) {
+//            console.log(err);
             assert.equal("HEOToken: caller must be a minter contract.", err.reason, "Wrong error message");
         }
         await heoTokenInstance.addMinter(privateSaleInstance.address, {from: ownerAccount});
@@ -37,12 +38,14 @@ contract('HEOManualDistribution', (accounts) => {
             await privateSaleInstance.distribute(investorAccount, 10, {from: investorAccount});
             assert.fail("Should throw an error when trying to mint tokens as investor")
         } catch (err) {
+//            console.log(err);
             assert.equal("Ownable: caller is not the owner", err.reason, "Wrong error message");
         }
         try {
             await privateSaleInstance.distribute(investorAccount, 10, {from: hackerAccount});
             assert.fail("Should throw an error when trying to mint tokens as investor")
         } catch (err) {
+//            console.log(err);
             assert.equal("Ownable: caller is not the owner", err.reason, "Wrong error message");
         }
 
@@ -60,6 +63,7 @@ contract('HEOManualDistribution', (accounts) => {
             await rogueInstance.distribute(investorAccount, 10);
             assert.fail("Should throw an error when trying to mint tokens as non-minter")
         } catch (err) {
+            //console.log(err);
             assert.equal("HEOToken: caller must be a minter contract.", err.reason, "Wrong error message");
         }
 
@@ -78,27 +82,27 @@ contract('HEOManualDistribution', (accounts) => {
         let heoTokenInstance = await HEOToken.deployed();
 
         // Get initial balances of first and second account.
-        let ownerStartingBalance = (await heoTokenInstance.balanceOf.call(ownerAccount)).toNumber();
-        let investorStartingBalance = (await heoTokenInstance.balanceOf.call(investorAccount)).toNumber();
-        let totalSupplyBefore = (await heoTokenInstance.totalSupply.call()).toNumber();
-        let distributedBefore = (await privateSaleInstance.distributed.call()).toNumber();
+        let ownerStartingBalance = await heoTokenInstance.balanceOf.call(ownerAccount);
+        let investorStartingBalance = await heoTokenInstance.balanceOf.call(investorAccount);
+        let totalSupplyBefore = await heoTokenInstance.totalSupply.call();
+        let distributedBefore = await privateSaleInstance.distributed.call();
 
-        assert.equal(ownerStartingBalance, 0, "Owner should have 0 HEO");
-        assert.equal(investorStartingBalance, 0, "Investor should have 0 HEO before investing");
+        assert.isTrue(new BN("0").eq(ownerStartingBalance), "Owner should have 0 HEO. Found: " + ownerStartingBalance);
+        assert.isTrue(new BN("0").eq(investorStartingBalance), "Investor should have 0 HEO before investing");
 
-        let amount = 20;
+        let amount = web3.utils.toWei("20");
         await heoTokenInstance.addMinter(privateSaleInstance.address, {from: ownerAccount});
         await privateSaleInstance.distribute(investorAccount, amount);
 
         // Get balances of first and second account after the transactions.
-        let ownerEndingBalance = (await heoTokenInstance.balanceOf.call(ownerAccount)).toNumber();
-        let investorEndingBalance = (await heoTokenInstance.balanceOf.call(investorAccount)).toNumber();
-        let distributedAfter = (await privateSaleInstance.distributed.call()).toNumber();
-        let totalSupplyAfter = (await heoTokenInstance.totalSupply.call()).toNumber();
-        assert.equal(ownerEndingBalance, 0, "Owner should still have 0 HEO");
-        assert.equal(investorEndingBalance, amount, "Investor should have 20 HEO after investing");
-        assert.equal(distributedAfter, amount + distributedBefore, "Expecting number of tokens sold on private sale to be " + (distributedBefore + amount));
-        assert.equal(totalSupplyAfter, totalSupplyBefore + amount, "Expecting totalSupply to increase by " + (totalSupplyBefore + amount));
+        let ownerEndingBalance = await heoTokenInstance.balanceOf.call(ownerAccount);
+        let investorEndingBalance = await heoTokenInstance.balanceOf.call(investorAccount);
+        let distributedAfter = await privateSaleInstance.distributed.call();
+        let totalSupplyAfter = await heoTokenInstance.totalSupply.call();
+        assert.isTrue(new BN("0").eq(ownerEndingBalance), "Owner should still have 0 HEO");
+        assert.isTrue(new BN(investorEndingBalance).eq(new BN(amount)), "Investor should have 20 HEO after investing. Instead, found: " + investorEndingBalance.toString());
+        assert.isTrue(new BN(distributedAfter).eq(new BN(amount).add(new BN(distributedBefore))), "Expecting number of tokens sold on private sale to be " + new BN(distributedBefore).add(new BN(amount)).toString());
+        assert.isTrue(new BN(totalSupplyAfter).eq(new BN(totalSupplyBefore).add(new BN(amount))), "Expecting totalSupply to increase by " + new BN(totalSupplyBefore).add(new BN(amount)).toString());
     });
 
     it('should enforce token limits', async () => {
@@ -110,13 +114,13 @@ contract('HEOManualDistribution', (accounts) => {
         let heoTokenInstance = await HEOToken.deployed();
 
         // Get initial balances of first and second account.
-        let ownerStartingBalance = (await heoTokenInstance.balanceOf.call(ownerAccount)).toNumber();
-        let investorStartingBalance = (await heoTokenInstance.balanceOf.call(investorAccount)).toNumber();
-        let totalSupplyBefore = (await heoTokenInstance.totalSupply.call()).toNumber();
-        let distributedBefore = (await privateSaleInstance.distributed.call()).toNumber();
+        let ownerStartingBalance = await heoTokenInstance.balanceOf.call(ownerAccount);
+        let investorStartingBalance = await heoTokenInstance.balanceOf.call(investorAccount);
+        let totalSupplyBefore = await heoTokenInstance.totalSupply.call();
+        let distributedBefore = await privateSaleInstance.distributed.call();
 
         // Try minting too many private sale tokens
-        var amount = 84999;
+        var amount =  web3.utils.toWei("84999");
         try {
             await privateSaleInstance.distribute(investorAccount, amount, {from: ownerAccount});
             assert.fail("should fail to mint more tokens than allowed to private sale")
@@ -142,14 +146,14 @@ contract('HEOManualDistribution', (accounts) => {
             assert.equal("value out-of-bounds", err.reason, err.reason);
         }
 
-        let ownerBalanceAfter = (await heoTokenInstance.balanceOf.call(ownerAccount)).toNumber();
-        let investorBalanceAfter = (await heoTokenInstance.balanceOf.call(investorAccount)).toNumber();
-        let distributedAfter = (await privateSaleInstance.distributed.call()).toNumber();
-        let totalSupplyAfter = (await heoTokenInstance.totalSupply.call()).toNumber();
+        let ownerBalanceAfter = await heoTokenInstance.balanceOf.call(ownerAccount);
+        let investorBalanceAfter = await heoTokenInstance.balanceOf.call(investorAccount);
+        let distributedAfter = await privateSaleInstance.distributed.call();
+        let totalSupplyAfter = await heoTokenInstance.totalSupply.call();
 
-        assert.equal(ownerBalanceAfter, ownerStartingBalance, "Owner's balance should not change after failure");
-        assert.equal(investorBalanceAfter, investorStartingBalance, "Investor's balance should not change after failure");
-        assert.equal(distributedBefore, distributedAfter, "Expecting number of tokens sold on private sale to not change after failure");
-        assert.equal(totalSupplyAfter, totalSupplyBefore, "Expecting totalSupply to not change after failure");
+        assert.isTrue(new BN(ownerBalanceAfter).eq(new BN(ownerStartingBalance)), "Owner's balance should not change after failure");
+        assert.isTrue(new BN(investorBalanceAfter).eq(new BN(investorStartingBalance)), "Investor's balance should not change after failure");
+        assert.isTrue(new BN(distributedBefore).eq(new BN(distributedAfter)), "Expecting number of tokens sold on private sale to not change after failure");
+        assert.isTrue(new BN(totalSupplyAfter).eq(new BN(totalSupplyBefore)), "Expecting totalSupply to not change after failure");
     });
 });

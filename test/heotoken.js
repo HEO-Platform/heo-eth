@@ -8,7 +8,7 @@ contract('HEOToken', (accounts) => {
     assert.equal(balance.valueOf(), 0, "Expecting 0 HEO in the first account");
 
     const maxSupply = await heoTokenInstance.maxSupply.call();
-    assert.equal(maxSupply, 30000000, "Expecting maxSupply to be 30M");
+    assert.equal(web3.utils.fromWei(maxSupply),  30000000, "Expecting maxSupply to be 30M");
 
     const totalSupply = await heoTokenInstance.totalSupply.call();
     assert.equal(totalSupply, 0, "Expecting totalSupply to be 0");

@@ -5,7 +5,7 @@
  * Proprietary and confidential
  * Written by Greg Solovyev <fiddlestring@gmail.com>, 2020
  */
-pragma solidity >=0.6.1 <0.7.0;
+pragma solidity >=0.6.1;
 
 import "openzeppelin-solidity/contracts/access/Ownable.sol";
 import "openzeppelin-solidity/contracts/token/ERC20/IERC20.sol";
@@ -17,8 +17,8 @@ contract HEOManualDistribution is Ownable, ReentrancyGuard {
     using SafeMath for uint256;
     HEOToken private _token;
     string _name;
-    uint256 private _limit; //Amount of HEO tokens to be distributed
-    uint256 private _distributed; //Amount of HEO tokens already distributed
+    uint256 private _limit; //Amount of HEO tokens (in tknBits) to be distributed
+    uint256 private _distributed; //Amount of HEO (in tknBits) tokens already distributed
 
     constructor (uint256 limit, uint256 distributed, string memory name, HEOToken token) public {
         _limit = limit;
@@ -28,7 +28,7 @@ contract HEOManualDistribution is Ownable, ReentrancyGuard {
         _name = name;
     }
 
-    /**
+    /*
     * Distribute token via a private sale
     */
     function distribute(address investorAddress, uint256 amount) public onlyOwner returns (bool) {
@@ -51,7 +51,7 @@ contract HEOManualDistribution is Ownable, ReentrancyGuard {
     function name() public view returns (string memory) {
         return _name;
     }
-    /**
+    /*
     * Override default Ownable::renounceOwnership to make sure
     * this contract does not get orphaned.
     */

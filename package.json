@@ -7,7 +7,9 @@
     "test": "test"
   },
   "scripts": {
-    "test": "npm test"
+    "test": "npm test",
+    "web-build": "truffle exec buildForWeb.js --network ganache",
+    "demo": "truffle exec initDemoData.js --network ganache"
   },
   "repository": {
     "type": "git",
@@ -20,6 +22,8 @@
   },
   "homepage": "https://github.com/grishick/heo-eth#readme",
   "dependencies": {
-    "openzeppelin-solidity": "^3.3.0"
+    "ganache-time-traveler": "^1.0.15",
+    "openzeppelin-solidity": "^3.3.0",
+    "truffle-hdwallet-provider": "^1.0.17"
   }
 }

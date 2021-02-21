@@ -1,4 +1,4 @@
-pragma solidity >=0.6.0 <0.7.0;
+pragma solidity >=0.6.2 <0.7.0;
 
 import "truffle/Assert.sol";
 import "truffle/DeployedAddresses.sol";
@@ -25,7 +25,7 @@ contract TestHEOToken {
   function testInitialValues() public {
     HEOToken heo = new HEOToken();
     uint expectedTotalSupply = 0;
-    uint expectedMaxAllowed = 30000000;
+    uint expectedMaxAllowed = 30000000000000000000000000;
     Assert.equal(heo.totalSupply(), expectedTotalSupply, "Should have 0 total supply initially");
     Assert.equal(heo.maxSupply(), expectedMaxAllowed, "Should have 30M max supply");
   }
