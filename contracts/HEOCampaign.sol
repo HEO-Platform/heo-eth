@@ -58,6 +58,7 @@ contract HEOCampaign is IHEOCampaign, Ownable, ReentrancyGuard {
     function donateNative() public payable {
         require(_isNative, "HEOCampaign: this campaign does not accept ETH.");
         require(msg.value > 0, "HEOCampaign: must send non-zero amount of ETH.");
+        require(_msgSender() != _beneficiary, "HEOCampaign: cannot donate to yourself.");
         uint256 raisedFunds = _raisedFunds.add(msg.value);
         require(raisedFunds <= _maxAmount, "HEOCampaign: this contribution will exceed maximum allowed for this campaign.");
         _raisedFunds = raisedFunds;
@@ -68,11 +69,12 @@ contract HEOCampaign is IHEOCampaign, Ownable, ReentrancyGuard {
     function donateERC20(uint256 amount) public nonReentrant {
         require(!_isNative, "HEOCampaign: this campaign does not accept ERC-20 tokens.");
         require(amount > 0, "HEOCampaign: must send non-zero amount of ERC-20 tokens.");
+        require(_msgSender() != _beneficiary, "HEOCampaign: cannot donate to yourself.");
         ERC20 paymentToken = ERC20(_currency);
         uint256 raisedFunds = _raisedFunds.add(amount);
         require(raisedFunds <= _maxAmount, "HEOCampaign: this contribution will exceed maximum allowed for this campaign.");
         _raisedFunds = raisedFunds;
-        paymentToken.safeTransferFrom(msg.sender, address(_beneficiary), amount);
+        paymentToken.safeTransferFrom(_msgSender(), address(_beneficiary), amount);
         IHEORewardFarm(HEOCampaignFactory(owner()).rewardFarm()).addDonation(_msgSender(), amount, _currency);
     }
 
