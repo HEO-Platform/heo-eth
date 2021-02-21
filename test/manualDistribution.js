@@ -24,12 +24,13 @@ contract('HEOManualDistribution', (accounts) => {
         let ownerAccount = accounts[0];
         let investorAccount = accounts[1];
         let hackerAccount = accounts[2];
-        let privateSaleInstance = await HEOManualDistribution.deployed();
+        let privateSaleInstance = await HEOManualDistribution.new(web3.utils.toWei("85000"), 0, "Test", HEOToken.address)
         let heoTokenInstance = await HEOToken.deployed();
         try {
             await privateSaleInstance.distribute(investorAccount, 10);
             assert.fail("Should throw an error when trying to mint tokens as non-minter")
         } catch (err) {
+//            console.log(err);
             assert.equal("HEOToken: caller must be a minter contract.", err.reason, "Wrong error message");
         }
         await heoTokenInstance.addMinter(privateSaleInstance.address, {from: ownerAccount});
@@ -37,12 +38,14 @@ contract('HEOManualDistribution', (accounts) => {
             await privateSaleInstance.distribute(investorAccount, 10, {from: investorAccount});
             assert.fail("Should throw an error when trying to mint tokens as investor")
         } catch (err) {
+//            console.log(err);
             assert.equal("Ownable: caller is not the owner", err.reason, "Wrong error message");
         }
         try {
             await privateSaleInstance.distribute(investorAccount, 10, {from: hackerAccount});
             assert.fail("Should throw an error when trying to mint tokens as investor")
         } catch (err) {
+//            console.log(err);
             assert.equal("Ownable: caller is not the owner", err.reason, "Wrong error message");
         }
 
@@ -60,6 +63,7 @@ contract('HEOManualDistribution', (accounts) => {
             await rogueInstance.distribute(investorAccount, 10);
             assert.fail("Should throw an error when trying to mint tokens as non-minter")
         } catch (err) {
+            //console.log(err);
             assert.equal("HEOToken: caller must be a minter contract.", err.reason, "Wrong error message");
         }
 
