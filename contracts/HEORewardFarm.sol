@@ -40,6 +40,18 @@ contract HEORewardFarm is IHEORewardFarm, Context {
         donations[donor].push(Donation(amount, token, donor, IHEOCampaign(_msgSender()), block.timestamp, 0, 0, 0, 1));
     }
 
+    function getDonation(address donor, uint256 di) external view returns(uint256) {
+        return donations[donor][di].amount;
+    }
+
+    function getDonationCampaign(address donor, uint256 di) external view returns(IHEOCampaign) {
+        return donations[donor][di].campaign;
+    }
+
+    function getDonationToken(address donor, uint256 di) external view returns(address) {
+        return donations[donor][di].token;
+    }
+
     function getDonationCount(address donor) external view returns (uint256) {
         return donations[donor].length;
     }
@@ -72,7 +84,9 @@ contract HEORewardFarm is IHEORewardFarm, Context {
     }
 
     function calculateReward(address donor, uint256 di) public view returns (uint256) {
-        require(di < donations[donor].length, "HEORewardFarm: donation does not exist");
+        if(di >= donations[donor].length) {
+            return 0;
+        }
         uint256 rewardHEO = 0;
         uint256 maxRewardPeriods = _globalParams.maxRewardPeriods();
         uint256 rewardPeriod = _globalParams.rewardPeriod();

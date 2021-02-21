@@ -346,6 +346,22 @@ contract("HEORewardFarm - static", (accounts) => {
         var myReward2 = await iRewardFarm.calculateReward(investorAccount5, 1);
         assert.isTrue(new BN(web3.utils.toWei("1.5")).eq(myReward1.add(myReward2)),
             `Expecting reward of 1.5 HEO, but got ${myReward1.toString()} and ${myReward2.toString()}`);
+        let donation1Amount = (await iRewardFarm.getDonation.call(investorAccount5, 0));
+        let donation2Amount = (await iRewardFarm.getDonation.call(investorAccount5, 1));
+        assert.isNotNull(donation1Amount, "Donation 1 should not be null");
+        assert.isNotNull(donation2Amount, "Donation 2 should not be null");
+        assert.isTrue(donation1Amount.eq(new BN(web3.utils.toWei("1", "ether"))),
+            `Expecting first donation to be 1 ETH, but found ${donation1Amount.toString()}`);
+        assert.isTrue(donation1Amount.eq(new BN(web3.utils.toWei("1", "ether"))),
+            `Expecting first donation to be 1 ETH, but found ${donation1Amount.toString()}`);
+        let donation1Campaign = (await iRewardFarm.getDonationCampaign.call(investorAccount5, 0));
+        let donation2Campaign = (await iRewardFarm.getDonationCampaign.call(investorAccount5, 1));
+        assert.isNotNull(donation1Campaign, "Donation 1 campaign should not be null");
+        assert.isNotNull(donation2Campaign, "Donation 2 campaign should not be null");
+        assert.equal(donation1Campaign, campaign1.address,
+            `Donation 1 campaign address is ${donation1Campaign} instead of ${campaign1.address}`);
+        assert.equal(donation2Campaign, campaign2.address,
+            `Donation 1 campaign address is ${donation2Campaign} instead of ${campaign2.address}`);
     });
 });
 
