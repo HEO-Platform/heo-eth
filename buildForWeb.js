@@ -34,6 +34,10 @@ module.exports = async (callback) => {
     instance = await HEORewardFarm.deployed();
     _writeFile("HEORewardFarm", false, instance);
 
+    //HEOPublicSale
+//    const HEOPublicSale = artifacts.require("HEOPublicSale");
+//    instance = await HEOPublicSale.deployed();
+    _writeFile("HEOPublicSale", true);
     callback();
 }
 
