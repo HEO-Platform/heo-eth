@@ -1,6 +1,7 @@
 .idea
 .openzeppelin
-.secret
+.secret_testnet
+.secret_mainnet
 build
 node_modules
 package-lock.json

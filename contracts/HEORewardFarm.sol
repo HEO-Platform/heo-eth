@@ -1,126 +1,184 @@
+// SPDX-License-Identifier: MIT
 pragma solidity >=0.6.1;
-import "openzeppelin-solidity/contracts/math/SafeMath.sol";
+
+import "./IHEORewardFarm.sol";
 import "openzeppelin-solidity/contracts/math/Math.sol";
 import "openzeppelin-solidity/contracts/GSN/Context.sol";
-import "./HEOGlobalParameters.sol";
-import "./HEOPriceOracle.sol";
+import "openzeppelin-solidity/contracts/math/SafeMath.sol";
+import "openzeppelin-solidity/contracts/token/ERC20/ERC20.sol";
+import "openzeppelin-solidity/contracts/token/ERC20/SafeERC20.sol";
+import "./IHEOPriceOracle.sol";
 import "./IHEOCampaign.sol";
 import "./IHEOCampaignRegistry.sol";
-import "./IHEORewardFarm.sol";
-import "./HEOToken.sol";
+import "./HEODAO.sol";
+import "./HEOLib.sol";
 
 contract HEORewardFarm is IHEORewardFarm, Context {
     using SafeMath for uint256;
+    using SafeERC20 for ERC20;
     struct Donation {
+        bytes32 key;
         uint256 amount; //amount donated
         address token; //currency token
         address donor; //who donated
-        IHEOCampaign campaign; //campaign for which the donation is made
+        address campaign; //campaign for which the donation is made
         uint256 ts; //timestamp when donation was made
-        uint256 reward; //how much HEO this donation has earned
-        uint256 lastCalculated; //period number when reward was last calculated
+        uint256 reward; //how much HEO this donation will earn
         uint256 claimed; //how much HEO have been claimed
-        uint8 active;
+        uint256 vestEndTs;
     }
 
-    mapping(address => Donation[]) donations;
-    HEOGlobalParameters private _globalParams;
-    HEOPriceOracle private _priceOracle;
-    IHEOCampaignRegistry private _registry;
+    uint256 private _unassignedBalance; //balance of reward tokens that has not been assigned to donations yet
 
-    constructor(HEOGlobalParameters globalParams, HEOPriceOracle priceOracle, IHEOCampaignRegistry registry) public {
-        _globalParams = globalParams;
-        _priceOracle = priceOracle;
-        _registry = registry;
+    mapping(bytes32 => Donation) private _donations;
+    mapping(address => bytes32[]) private _donationsByDonor;
+    mapping(address => bytes32[]) private _donationsByCampaign;
+    uint256 public totalDonations;
+
+    HEODAO _dao;
+
+    address payable private _owner;
+
+    event OwnershipTransferred(address indexed previousOwner, address indexed newOwner);
+    event DonationReceived(address indexed campaign, address indexed donor, uint256 indexed amount);
+
+    /**
+    * @dev Throws if called by any account other than the owner.
+    */
+    modifier onlyOwner() {
+        require(_owner == _msgSender(), "HEORewardFarm: caller is not the owner");
+        _;
+    }
+
+    constructor(HEODAO dao) public {
+        require(address(dao) != address(0), "DAO cannot be a zero address");
+        _dao = dao;
+        emit OwnershipTransferred(address(0), address(dao));
+        _owner = payable(address(dao));
     }
 
     function addDonation(address donor, uint256 amount, address token) external override {
-        require(_registry.getOwner(IHEOCampaign(_msgSender())) != address(0), "HEORewardFarm: campaign is not registered");
+        IHEOCampaignRegistry registry = IHEOCampaignRegistry(_dao.heoParams().contractAddress(HEOLib.CAMPAIGN_REGISTRY));
+        require(registry.getOwner(_msgSender()) != address(0), "HEORewardFarm: campaign is not registered");
         require(amount > 0, "HEORewardFarm: amount has to be greater than zero");
-        donations[donor].push(Donation(amount, token, donor, IHEOCampaign(_msgSender()), block.timestamp, 0, 0, 0, 1));
-    }
-
-    function getDonation(address donor, uint256 di) external view returns(uint256) {
-        return donations[donor][di].amount;
-    }
-
-    function getDonationCampaign(address donor, uint256 di) external view returns(IHEOCampaign) {
-        return donations[donor][di].campaign;
-    }
-
-    function getDonationToken(address donor, uint256 di) external view returns(address) {
-        return donations[donor][di].token;
-    }
-
-    function getDonationCount(address donor) external view returns (uint256) {
-        return donations[donor].length;
-    }
-
-    function claimedReward(address donor, uint256 di) public view returns (uint256) {
-        Donation storage donation = donations[donor][di];
-        return donation.claimed;
-    }
-
-    function claimReward(address destination, uint256 di, uint256 amount) public {
-        address donor = _msgSender();
-        Donation storage donation = donations[donor][di];
-        require(donation.donor == donor, "HEORewardFarm: caller is not the donor.");
-        require(donation.amount > 0, "HEORewardFarm: zero-donation.");
-        uint256 reward = calculateReward(donor, di);
-        //cache pre-calculated reward
+        (uint256 heoPrice, uint256 priceDecimals) = IHEOPriceOracle(_dao.heoParams().contractAddress(HEOLib.PRICE_ORACLE)).getPrice(token);
+        uint256 reward = _fullReward(amount, heoPrice, priceDecimals);
+        bytes32 key = keccak256(abi.encodePacked(donor, amount, _msgSender(), block.timestamp));
+        //check if there is already an identical donation in this block
+        require(_donations[key].amount == 0, "HEORewardFarm: please wait until next block to make the next donation");
+        Donation memory donation;
+        donation.key = key;
+        donation.amount = amount;
+        donation.token = token;
+        donation.donor = donor;
+        donation.campaign = _msgSender();
+        donation.ts = block.timestamp;
         donation.reward = reward;
-        uint256 rewardPeriod = _globalParams.rewardPeriod();
-        uint256 maxRewardPeriods = _globalParams.maxRewardPeriods();
-        uint256 rewardPeriods = Math.min(block.timestamp.sub(donation.ts).div(rewardPeriod), maxRewardPeriods);
-        if(rewardPeriods == maxRewardPeriods) {
-            //donation is fully claimed
-            donation.active = 0;
+        donation.vestEndTs = block.timestamp.add(_dao.heoParams().intParameterValue(HEOLib.DONATION_VESTING_SECONDS));
+
+        _donations[key] = donation;
+        _donationsByDonor[donor].push(key);
+        _donationsByCampaign[_msgSender()].push(key);
+        if(_unassignedBalance > reward) {
+            _unassignedBalance = _unassignedBalance.sub(reward);
+        } else {
+            _unassignedBalance = 0;
         }
-        donation.lastCalculated = rewardPeriods; //we have calculated reward for this donation up to this period
-        require(reward >= donation.claimed.add(amount), "HEORewardFarm: claim amount is higher than available reward.");
-        require(destination != address(0), "HEORewardFarm: invalid destination for reward.");
-        donation.claimed = donation.claimed.add(amount);
-        HEOToken(_globalParams.heoToken()).mint(destination, amount);
+        totalDonations = totalDonations.add(1);
+        emit DonationReceived(_msgSender(), donor, amount);
     }
 
-    function calculateReward(address donor, uint256 di) public view returns (uint256) {
-        if(di >= donations[donor].length) {
-            return 0;
+    function _fullReward(uint256 amount, uint256 heoPrice, uint256 priceDecimals) internal view returns(uint256) {
+        uint256 donationYieldDecimals = _dao.heoParams().intParameterValue(HEOLib.DONATION_YIELD_DECIMALS);
+        return amount.mul(_currentX()).div(donationYieldDecimals).div(heoPrice).mul(priceDecimals);
+    }
+
+    function _currentX() internal view returns(uint256) {
+        uint256 donationYield = _dao.heoParams().intParameterValue(HEOLib.DONATION_YIELD);
+        return _unassignedBalance.div(donationYield);
+    }
+
+    function fullReward(uint256 amount, uint256 heoPrice, uint256 priceDecimals) external view override returns(uint256) {
+        return _fullReward(amount, heoPrice, priceDecimals);
+    }
+
+    function donationReward(bytes32 key) public view returns (uint256) {
+        return _donations[key].reward;
+    }
+
+    function vestedReward(bytes32 key) public view returns (uint256) {
+        if(block.timestamp >= _donations[key].vestEndTs) {
+            return _donations[key].reward;
         }
-        uint256 rewardHEO = 0;
-        uint256 maxRewardPeriods = _globalParams.maxRewardPeriods();
-        uint256 rewardPeriod = _globalParams.rewardPeriod();
-        Donation memory donation = donations[donor][di];
-        rewardHEO = rewardHEO.add(donation.reward);
-        if(donation.active == 0) {
-            return rewardHEO; //this donation is fully claimed
+        return _donations[key].reward.div(_donations[key].vestEndTs.sub(_donations[key].ts)).mul(block.timestamp - _donations[key].ts);
+    }
+
+    function unassignedBalance() external view returns(uint256) {
+        return _unassignedBalance;
+    }
+
+    function getDonationAmount(bytes32 key) external view returns(uint256) {
+        return _donations[key].amount;
+    }
+
+    function getDonationCampaign(bytes32 key) external view returns(address) {
+        return _donations[key].campaign;
+    }
+
+    function getDonationToken(bytes32 key) external view returns(address) {
+        return _donations[key].token;
+    }
+
+    function donorsDonations(address donor) external view returns (bytes32[] memory) {
+        return _donationsByDonor[donor];
+    }
+    function cmapaignDonations(address campaign) external view returns (uint256) {
+        return _donationsByCampaign[campaign].length;
+    }
+    function claimedReward(bytes32 key) public view returns (uint256) {
+        return _donations[key].claimed;
+    }
+
+    function claimReward(address destination, bytes32 key, uint256 amount) public {
+        Donation storage donation = _donations[key];
+        require(donation.donor == _msgSender(), "HEORewardFarm: caller is not the donor");
+        uint256 newClaimed = donation.claimed.add(amount);
+        require(newClaimed <= vestedReward(key), "HEORewardFarm: claim exceeds vested reward");
+        donation.claimed = newClaimed;
+        ERC20(_dao.heoParams().contractAddress(HEOLib.PLATFORM_TOKEN_ADDRESS)).safeTransfer(destination, amount);
+    }
+
+    /**
+    @dev withdraw funds back to DAO
+    */
+    function withdraw(address _token) external override onlyOwner {
+        ERC20 token = ERC20(_token);
+        uint256 balance = token.balanceOf(address(this));
+        require(balance > 0, "token balance is zero");
+        if(balance > 0) {
+            token.safeTransfer(address(_dao), balance);
         }
-        if(donation.campaign.donationYield() == 0) {
-            return 0;
-        }
-        uint256 startPeriod = donation.ts.sub(_globalParams.globalRewardStart()).div(rewardPeriod);
-        uint256 rewardPeriods = Math.min(block.timestamp.sub(donation.ts).div(rewardPeriod), maxRewardPeriods);
-        //reward per period in tknBits/wei of donation currency identified by donation.token
-        uint256 periodReward = donation.campaign.donationYield().mul(donation.amount).div(maxRewardPeriods);
-        uint256 start = donation.lastCalculated;
-        for(uint256 k = start; k < rewardPeriods; k++) {
-            uint256 globalPeriod = startPeriod.add(k);
-            //price of 1 HEO in tknBits/wei of donation currency at global period
-            uint256 periodPrice = _priceOracle.getPriceAtPeriod(donation.token, globalPeriod);
-            rewardHEO = rewardHEO.add(periodReward.div(periodPrice));
-        }
-        //round the decimals
-        uint256 precision = 100000;
-        uint256 remainder = rewardHEO.mod(precision);
-        uint256 dif = precision.sub(remainder);
-        if(remainder > 0) {
-            if(dif < precision.div(2)) {
-                rewardHEO = rewardHEO.add(dif);
-            } else {
-                rewardHEO = rewardHEO.sub(dif);
-            }
-        }
-        return rewardHEO;
+    }
+
+    function replenish(address _token, uint256 _amount) external override onlyOwner {
+        require(_token == _dao.heoParams().contractAddress(HEOLib.PLATFORM_TOKEN_ADDRESS),
+        "Reward farm accepts only platform token");
+        ERC20(_token).safeTransferFrom(_msgSender(), address(this), _amount);
+        _unassignedBalance = _unassignedBalance.add(_amount);
+    }
+
+    function assignTreasurer(address _treasurer) external override onlyOwner {
+        // do nothing
+    }
+
+    /**
+    * @dev Transfers ownership of the contract to a new account (`newOwner`).
+    * Can only be called by the current owner.
+     */
+    function transferOwnership(address payable newOwner) public override onlyOwner {
+        require(newOwner != address(0), "owner cannot be a zero address");
+        emit OwnershipTransferred(_owner, newOwner);
+        _owner = newOwner;
     }
 }
 

@@ -1,8 +1,9 @@
+// SPDX-License-Identifier: MIT
 pragma solidity >=0.6.1;
 
-import "./IHEOCampaign.sol";
+import "./IHEOCampaignFactory.sol";
 
 interface IHEOCampaignRegistry {
-    function registerCampaign(IHEOCampaign campaign) external;
-    function getOwner(IHEOCampaign campaign) external view returns (address);
+    function registerCampaign(address campaign) external;
+    function getOwner(address campaign) external view returns (address);
 }
