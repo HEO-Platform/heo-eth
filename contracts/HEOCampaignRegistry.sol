@@ -1,14 +1,19 @@
+// SPDX-License-Identifier: MIT
 pragma solidity >=0.6.1;
 
 import "openzeppelin-solidity/contracts/access/Ownable.sol";
 import "./IHEOCampaignFactory.sol";
 import "./IHEOCampaign.sol";
 import "./IHEOCampaignRegistry.sol";
+import "./HEODAO.sol";
+import "./HEOLib.sol";
 
 /*
 * This contract acts as storage for campaigns.
 */
 contract HEOCampaignRegistry is IHEOCampaignRegistry, Ownable {
+    HEODAO private _dao;
+
     /*
     * Maps owners do their campaigns
     */
@@ -24,10 +29,9 @@ contract HEOCampaignRegistry is IHEOCampaignRegistry, Ownable {
     */
     address[] private _campaigns;
 
-    //use interface, so that we can replace the factory contract
-    IHEOCampaignFactory private _factory;
-
-    constructor () public {
+    constructor (HEODAO dao) public {
+        require(address(dao) != address(0), "HEOCampaignFactory: DAO cannot be zero-address");
+        _dao = dao;
     }
     /*
     * Override default Ownable::renounceOwnership to make sure
@@ -37,24 +41,14 @@ contract HEOCampaignRegistry is IHEOCampaignRegistry, Ownable {
         revert("HEOCampaignRegistry: Cannot renounce ownership");
     }
 
-    /*
-    * Instance of IHEOCampaignFactory that is authorized to store
-    * campaigns in this contract.
-    */
-    function getFactory() public view returns (IHEOCampaignFactory) {
-        return _factory;
-    }
-
-    function setFactory(IHEOCampaignFactory factory) public onlyOwner {
-        _factory = factory;
-    }
-
-    function registerCampaign(IHEOCampaign campaign) external override {
-        require(address(_factory) != address(0), "HEOCampaignRegistry: authorized instance of IHEOCampaignFactory is not set.");
-        require(address(_factory) == _msgSender(), "HEOCampaignRegistry: caller must be the authorized instance of IHEOCampaignFactory.");
-        _ownersToCampaigns[campaign.beneficiary()].push(address(campaign));
-        _campaignsToOwners[address(campaign)] = campaign.beneficiary();
-        _campaigns.push(address(campaign));
+    function registerCampaign(address campaign) external override {
+        address factory = _dao.heoParams().contractAddress(HEOLib.CAMPAIGN_FACTORY);
+        require(factory != address(0), "HEOCampaignRegistry: authorized instance of IHEOCampaignFactory is not set");
+        require(factory == _msgSender(), "HEOCampaignRegistry: caller must be the authorized instance of IHEOCampaignFactory");
+        address campaignOwner = Ownable(campaign).owner();
+        _ownersToCampaigns[campaignOwner].push(campaign);
+        _campaignsToOwners[campaign] = campaignOwner;
+        _campaigns.push(campaign);
     }
 
     function myCampaigns() public view returns (address[] memory) {
@@ -69,7 +63,7 @@ contract HEOCampaignRegistry is IHEOCampaignRegistry, Ownable {
         return _campaigns.length;
     }
 
-    function getOwner(IHEOCampaign campaign) external view override returns (address) {
-        return _campaignsToOwners[address(campaign)];
+    function getOwner(address campaign) external view override returns (address) {
+        return _campaignsToOwners[campaign];
     }
 }

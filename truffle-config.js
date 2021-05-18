@@ -1,6 +1,6 @@
 const HDWalletProvider = require('truffle-hdwallet-provider');
 const fs = require('fs');
-const mnemonic = fs.readFileSync(".secret").toString().trim();
+const mnemonic = fs.readFileSync(".secret_testnet").toString().trim();
 
 module.exports = {
   // Uncommenting the defaults below 
@@ -21,20 +21,26 @@ module.exports = {
   //    network_id: "*"
   //  }
   //}
-  //
+    plugins: [
+      'truffle-contract-size'
+    ],
     compilers: {
         solc: {
-            version: "0.6.2",
+            version: "0.6.12",
                 // Can also be set to "native" to use a native solc
             docker: false, // Use a version obtained through docker
             parser: "solcjs", // Leverages solc-js purely for speedy parsing
+            settings:{
+                optimizer: { enabled: true, runs: 1 }
+            }
         }
     },
     networks: {
         ganache:{
             host:"127.0.0.1",
             port:7545,
-            network_id:"5777"
+            network_id:"5777",
+            gas: 9721975000
         },
         develop: {
             port: 8545,
@@ -43,7 +49,7 @@ module.exports = {
             defaultEtherBalance: 500
         },
         testnetb: {
-            provider: () => new HDWalletProvider(mnemonic, `https://data-seed-prebsc-1-s1.binance.org:8545`, 0),
+            provider: () => new HDWalletProvider(mnemonic, `https://data-seed-prebsc-2-s3.binance.org:8545`, 0),
             network_id: 97,
             confirmations: 10,
             timeoutBlocks: 200,

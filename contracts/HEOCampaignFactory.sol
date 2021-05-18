@@ -1,89 +1,73 @@
+// SPDX-License-Identifier: MIT
 pragma solidity >=0.6.1;
 
+import "openzeppelin-solidity/contracts/token/ERC20/ERC20.sol";
+import "openzeppelin-solidity/contracts/token/ERC20/SafeERC20.sol";
 import "openzeppelin-solidity/contracts/access/Ownable.sol";
+import "openzeppelin-solidity/contracts/math/SafeMath.sol";
+import "openzeppelin-solidity/contracts/utils/ReentrancyGuard.sol";
 import "./HEOCampaign.sol";
+import "./IHEOPriceOracle.sol";
 import "./IHEOCampaignFactory.sol";
 import "./IHEOCampaignRegistry.sol";
-import "./HEOGlobalParameters.sol";
-import "./HEOPriceOracle.sol";
-import "./HEOToken.sol";
 import "./IHEORewardFarm.sol";
+import "./HEOParameters.sol";
+import "./HEODAO.sol";
+import "./HEOLib.sol";
 
-contract HEOCampaignFactory is IHEOCampaignFactory, Ownable {
-    IHEOCampaignRegistry private _registry;
-    HEOGlobalParameters private _globalParams;
-    HEOPriceOracle private _priceOracle;
-    IHEORewardFarm private _rewardFarm;
+contract HEOCampaignFactory is IHEOCampaignFactory, Ownable, ReentrancyGuard {
+    using SafeMath for uint256;
+    using SafeERC20 for ERC20;
 
-    event CampaignDeployed(address indexed campaignAddress);
-    /*
-    * {registry} is the storage contract that holds maps of
-    * campaigns and owners.
-    */
-    constructor (IHEOCampaignRegistry registry, HEOGlobalParameters globalParams,
-        HEOPriceOracle priceOracle, IHEORewardFarm rewardFarm) public {
-        require(address(registry) != address(0), "HEOCampaignFactory: IHEOCampaignRegistry cannot be zero-address");
-        require(address(globalParams) != address(0), "HEOCampaignFactory: HEOGlobalParameters cannot be zero-address");
-        require(address(priceOracle) != address(0), "HEOCampaignFactory: HEOPriceOracle cannot be zero-address");
+    HEODAO private _dao;
 
-        _registry = registry;
-        _globalParams = globalParams;
-        _priceOracle = priceOracle;
-        _rewardFarm = rewardFarm;
+    event CampaignDeployed (
+        address indexed campaignAddress,
+        address indexed owner,
+        address indexed beneficiary,
+        uint256 maxAmount,
+        address token,
+        string metaUrl
+    );
+
+    constructor (HEODAO dao) public {
+        require(address(dao) != address(0), "HEOCampaignFactory: DAO cannot be zero-address");
+        _dao = dao;
     }
 
     /*
-    * In order to create a campaign we have to burn beneficiary's HEO.
-    * To do that this factory has to be registered in HEOToken._burners map.
+     @dev creates a campaign, registers it in campaign registry and transfers ownership of HEOCampaign instance
+     to the caller.
     */
-    function createCampaign(uint256 maxAmount, uint256 heoToBurn, address token, string memory metadataUrl) public {
-        //require(heoToBurn > 0, "HEOCampaignFactory: cannot create a campaign without burning HEO tokens.");
-        uint256 price = _priceOracle.getPrice(token);
-        require(price > 0, "HEOCampaignFactory: currency at given address is not supported.");
-        uint256 x = _globalParams.profitabilityCoefficient();
-        uint256 fee = _globalParams.serviceFee();
-
-        //Burn HEO tokens before creating the campaign
-        HEOToken(_globalParams.heoToken()).burn(_msgSender(), heoToBurn);
-        HEOCampaign campaign = new HEOCampaign(maxAmount, _msgSender(), x, heoToBurn, price, token, fee, metadataUrl);
-        _registry.registerCampaign(campaign);
-        emit CampaignDeployed(address(campaign));
+    function createCampaign(uint256 maxAmount, address token, string memory metaUrl, address payable beneficiary) external override nonReentrant {
+        HEOCampaign campaign = new HEOCampaign(maxAmount, beneficiary, token, metaUrl, _dao, 0, 0, 0, 0, 0, address(0));
+        IHEOCampaignRegistry registry = IHEOCampaignRegistry(_dao.heoParams().contractAddress(HEOLib.CAMPAIGN_REGISTRY));
+        campaign.transferOwnership(_msgSender());
+        registry.registerCampaign(address(campaign));
+        emit CampaignDeployed(address(campaign), address(_msgSender()), beneficiary, maxAmount, token, metaUrl);
     }
 
-    /**
-    * Beneficiary can increase Donation Yield (Y) bu burning more HEO tokens.
-    */
-    function increaseYield(HEOCampaign campaign, uint256 heoToBurn) public {
-        require(heoToBurn > 0, "HEOCampaignFactory: cannot increase yield by burning zero tokens.");
-        require(address(campaign) != address(0), "HEOCampaignFactory: campaign cannot be zero-address.");
-        require(campaign.beneficiary() == _msgSender(), "HEOCampaignFactory: only beneficiary can increase campaign yield.");
-        address registeredOwner = _registry.getOwner(campaign);
-        require(registeredOwner != address(0), "HEOCampaignFactory: campaign is not registered.");
-        HEOToken( _globalParams.heoToken()).burn(_msgSender(), heoToBurn);
-        campaign.increaseYield(heoToBurn);
-    }
+    function createRewardCampaign(uint256 maxAmount, address token, string memory metaUrl, address payable beneficiary) external override nonReentrant {
+        require(maxAmount > 0, "HEOCampaignFactory: maxAmount has to be greater than zero");
+        address heoAddr = _dao.heoParams().contractAddress(HEOLib.PLATFORM_TOKEN_ADDRESS);
+        (uint256 heoPrice, uint256 heoPriceDecimals) = IHEOPriceOracle(_dao.heoParams().contractAddress(HEOLib.PRICE_ORACLE)).getPrice(token);
+        // Example 1: 1 HEO = 1USDC, maxAmount = 100 USDC, fee = 5% = 5 USDC = 2.5HEO
+        // Example 2: 1 HEO = 0.01ETH, maxAmount = 10 ETH, fee = 2.5% = 0.25 ETH = 25HEO
+        uint256 heoLocked = _dao.heoParams().calculateFee(maxAmount).div(heoPrice).mul(heoPriceDecimals);
+        HEOCampaign campaign = new HEOCampaign(maxAmount, beneficiary, token, metaUrl, _dao,  heoLocked, heoPrice,
+            heoPriceDecimals, _dao.heoParams().fundraisingFee(), _dao.heoParams().fundraisingFeeDecimals(), heoAddr);
+        ERC20(heoAddr).safeTransferFrom(_msgSender(), address(campaign), heoLocked);
 
+        IHEOCampaignRegistry registry = IHEOCampaignRegistry(_dao.heoParams().contractAddress(HEOLib.CAMPAIGN_REGISTRY));
+        campaign.transferOwnership(_msgSender());
+        registry.registerCampaign(address(campaign));
+        emit CampaignDeployed(address(campaign), address(_msgSender()), beneficiary, maxAmount, token, metaUrl);
+    }
     /*
     * Override default Ownable::renounceOwnership to make sure
     * this contract does not get orphaned.
     */
     function renounceOwnership() public override {
         revert("HEOCampaignFactory: Cannot renounce ownership.");
-    }
-
-    function setRegistry(IHEOCampaignRegistry registry) external {
-        _registry = registry;
-    }
-
-    function priceOracle() public view returns (address) {
-        return address(_priceOracle);
-    }
-
-    function globalParams() public view returns (address) {
-        return address(_globalParams);
-    }
-
-    function rewardFarm()  public view returns (address) {
-        return address(_rewardFarm);
     }
 }
