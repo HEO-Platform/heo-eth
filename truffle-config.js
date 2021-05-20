@@ -48,12 +48,18 @@ module.exports = {
             accounts: 10,
             defaultEtherBalance: 500
         },
-        testnetb: {
-            provider: () => new HDWalletProvider(mnemonic, `https://data-seed-prebsc-2-s3.binance.org:8545`, 0),
+        bsctestnet: {
+            provider: () => new HDWalletProvider(mnemonic, `https://data-seed-prebsc-1-s1.binance.org:8545`, 0, 3),
             network_id: 97,
             confirmations: 10,
             timeoutBlocks: 200,
-            accounts: 10,
+            skipDryRun: true
+        },
+        bscdev: {
+            provider: () => new HDWalletProvider(mnemonic, `https://data-seed-prebsc-1-s1.binance.org:8545`, 0, 3),
+            network_id: 97,
+            confirmations: 10,
+            timeoutBlocks: 200,
             skipDryRun: true
         },
         bsc: {

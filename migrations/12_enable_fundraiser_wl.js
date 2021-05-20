@@ -1,27 +1,22 @@
-const StableCoinForTests = artifacts.require("StableCoinForTests");
-const HEOParameters = artifacts.require("HEOParameters");
 const HEODAO = artifacts.require("HEODAO");
-const HEOToken = artifacts.require("HEOToken");
-const HEOStaking = artifacts.require("HEOStaking");
-var BN = web3.utils.BN;
 
 const ONE_COIN = web3.utils.toWei("1");
 const KEY_ENABLE_FUNDRAISER_WHITELIST = 11;
 const KEY_FUNDRAISER_WHITE_LIST = 5;
 const KEY_ANON_CAMPAIGN_LIMIT = 12;
-const KEY_PLATFORM_TOKEN_ADDRESS = 5;
+
 module.exports = async function(deployer, network, accounts) {
     if(network != "test") {
+        console.log(`Network is ${network}`);
+        if(!accounts[1]) {
+            accounts[1] = "0x748351f954Af3C95a41b88ba7563453Ab98eA085";
+        }
+        if(!accounts[2]) {
+            accounts[2] = "0xa15a19C348DfF6289f3D4D8bC85fd00FBfA4a20A";
+        }
+        console.log(`Accounts are ${accounts[0]}, ${accounts[1]}, ${accounts[2]}`);
         //add stable-coin to accepted currencies
-        const iHEOParams = await HEOParameters.deployed();
         const iHEODao = await HEODAO.deployed();
-        const platformTokenAddress = await iHEOParams.contractAddress.call(KEY_PLATFORM_TOKEN_ADDRESS);
-        const iToken = await HEOToken.at(platformTokenAddress);
-        const iStaking = await HEOStaking.deployed();
-//        for(let i=0; i < 3; i++) {
-//            await iToken.approve(iStaking.address, web3.utils.toWei("1"), {from: accounts[i]})
-//            await iHEODao.registerToVote(web3.utils.toWei("1"), platformTokenAddress, {from: accounts[i]});
-//        }
         await iHEODao.proposeVote(0, 0, KEY_ENABLE_FUNDRAISER_WHITELIST, [], [1], 259201, 51,
             {from: accounts[0]});
         let events = await iHEODao.getPastEvents('ProposalCreated');
