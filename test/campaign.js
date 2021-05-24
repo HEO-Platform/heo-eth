@@ -464,13 +464,40 @@ contract("HEOCampaign", (accounts) => {
 
         //try to deploy unbound campaign with burning tokens
         try {
-            campaign = await HEOCampaign.new(0, charityAccount, iTestCoin.address, "https://someurl1",
+            await HEOCampaign.new(0, charityAccount, iTestCoin.address, "https://someurl1",
                 daoInstance.address, 1, 0, 0, 0, 0, platformTokenAddress, {from: charityAccount});
             assert.fail(`Should fail to deploy unbound campaign with heoSpent > 0`);
         } catch (err) {
             assert.equal(err.reason,
                 "HEOCampaign: maxAmount has to be greater than zero", `Wrong error: ${err}`);
         }
+    })
+
+    it("Should close non-reward campaigns", async() => {
+        //deploy campaign to collect unlimited native coin
+        let campaign = await HEOCampaign.new(0, charityAccount, "0x0000000000000000000000000000000000000000",
+            "https://someurl1", daoInstance.address, 0, 0, 0, 0, 0, "0x0000000000000000000000000000000000000000",
+            {from: charityWorker});
+        let heoPrice = (await campaign.heoPrice.call()).toNumber();
+        assert.equal(heoPrice, 0, `Expecting heoPrice = 0, but got ${heoPrice}`);
+        let isActive = (await campaign.isActive.call());
+        assert.isTrue(isActive, `Expecting campaign to be active, but got ${isActive}`);
+        let addrCheck = await campaign.beneficiary.call();
+        assert.equal(addrCheck, charityAccount, `Expecting beneficiary to be ${charityAccount} but found ${addrCheck}`);
+        addrCheck = await campaign.owner.call();
+        assert.equal(addrCheck, charityWorker, `Expecting owner to be ${charityWorker} but found ${addrCheck}`);
+        try {
+            await campaign.close({from: charityAccount});
+            assert.fail("Non-owner should not be able to close the campaign");
+        } catch(err) {
+            assert.equal(err.reason,
+                "Ownable: caller is not the owner", `Wrong error message ${err}`);
+        }
+        isActive = (await campaign.isActive.call());
+        assert.isTrue(isActive, `Expecting campaign to be active after failed attempt to close, but got ${isActive}`);
+        await campaign.close({from: charityWorker});
+        isActive = (await campaign.isActive.call());
+        assert.isFalse(isActive, `Expecting campaign to be closed after successful attempt to close, but got ${isActive}`);
     })
 });
 
