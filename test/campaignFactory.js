@@ -185,6 +185,23 @@ contract("HEOCampaignFactory", (accounts) => {
         assert.equal("0x0000000000000000000000000000000000000000", targetToken,
             `Expected campaign currency address to be 0x0000000000000000000000000000000000000000, but got ${targetToken}`);
 
+        let isActive = (await lastCampaign.isActive.call());
+        assert.isTrue(isActive, `Expecting campaign to be active, but got ${isActive}`);
+        //try closing by non-owner
+        try {
+            await lastCampaign.close({from: founder1});
+            assert.fail("Non-owner should not be able to close the campaign");
+        } catch(err) {
+            assert.equal(err.reason,
+                "Ownable: caller is not the owner", `Wrong error message ${err}`);
+        }
+        isActive = (await lastCampaign.isActive.call());
+        assert.isTrue(isActive, `Expecting campaign to be active after failed attempt to close, but got ${isActive}`);
+        //close by owner
+        await lastCampaign.close({from: charityAccount});
+        isActive = (await lastCampaign.isActive.call());
+        assert.isFalse(isActive, `Expecting campaign to be closed after successful attempt to close, but got ${isActive}`);
+
     });
 
     it("Should deploy a reward campaign for raising 100 ETH by spending 5 HEO when HEO price is 1 ETH", async () => {
@@ -248,6 +265,36 @@ contract("HEOCampaignFactory", (accounts) => {
         var targetToken = await lastCampaign.currency.call();
         assert.equal("0x0000000000000000000000000000000000000000", targetToken,
             `Expected campaign currency address to be 0x0000000000000000000000000000000000000000, but got ${targetToken}`);
+
+        let isActive = (await lastCampaign.isActive.call());
+        assert.isTrue(isActive, `Expecting campaign to be active, but got ${isActive}`);
+        //try closing by non-owner
+        balanceBefore = await iToken.balanceOf.call(charityAccount);
+        try {
+            await lastCampaign.close({from: founder1});
+            assert.fail("Non-owner should not be able to close the campaign");
+        } catch(err) {
+            assert.equal(err.reason,
+                "Ownable: caller is not the owner", `Wrong error message ${err}`);
+        }
+        isActive = (await lastCampaign.isActive.call());
+        assert.isTrue(isActive, `Expecting campaign to be active after failed attempt to close, but got ${isActive}`);
+        balanceAfter = await iToken.balanceOf.call(charityAccount);
+        assert.isTrue(balanceAfter.eq(balanceBefore),
+            `Expecting charity's HEO balance to remain unchanged, but found ${balanceAfter}`);
+
+        //close by owner
+        await lastCampaign.close({from: charityAccount});
+        isActive = (await lastCampaign.isActive.call());
+        assert.isFalse(isActive, `Expecting campaign to be closed after successful attempt to close, but got ${isActive}`);
+
+        //verify that HEO was refunded
+        balanceAfter = await iToken.balanceOf.call(lastCampaign.address);
+        assert.isTrue(balanceAfter.eq(new BN(web3.utils.toWei("0"))),
+            `Expecting campaign to have 0 HEO after it was closed, but found ${balanceAfter}`);
+        balanceAfter = await iToken.balanceOf.call(charityAccount);
+        assert.isTrue(balanceAfter.eq(balanceBefore.add(new BN(web3.utils.toWei("5")))),
+            `Expecting charity's HEO balance to go up by 5 HEO, but found ${balanceAfter}`);
     });
 
     it("A 100 ETH reward campaign should cost 102.94 HEO with 3.5% fee, when HEO price=0.034 ETH", async () => {
@@ -409,7 +456,41 @@ contract("HEOCampaignFactory", (accounts) => {
         balanceAfter = await iToken.balanceOf.call(lastCampaign.address);
         assert.isTrue(balanceAfter.eq(new BN(toApprove)),
             `Expecting campaign to have ${toApprove} HEObits, but found ${balanceAfter}`);
+
+        balanceBefore = await iTestCoin.balanceOf(donorAccount);
+        let charityBalanceBefore = await iTestCoin.balanceOf(charityAccount);
+        let daoHeoBefore = await iToken.balanceOf(iDAO.address);
+        await iTestCoin.approve(lastCampaign.address, web3.utils.toWei("55"), {from: donorAccount});
+        await lastCampaign.donateERC20(web3.utils.toWei("55"), {from: donorAccount});
+        balanceAfter = await iTestCoin.balanceOf(donorAccount);
+        let charityBalanceAfter = await iTestCoin.balanceOf(charityAccount);
+        let daoHeoAfter = await iToken.balanceOf(iDAO.address);
+        assert.isTrue(balanceBefore.sub(new BN(web3.utils.toWei("55"))).eq(balanceAfter),
+            `Donor's USDC balance should go down by 55. Found after: ${balanceAfter}, before: ${balanceBefore}`);
+        assert.isTrue(charityBalanceBefore.add(new BN(web3.utils.toWei("55"))).eq(charityBalanceAfter),
+            `Charity's USDC balance should go up by 55. Found after: ${charityBalanceAfter}, before: ${charityBalanceBefore}`);
+        let heoSpent = new BN(toApprove).div(new BN("1000"));
+        assert.isTrue(daoHeoBefore.add(heoSpent).eq(daoHeoAfter),
+            `DAO's HEO balance should go up by ${heoSpent}. Found after: ${daoHeoAfter}, before: ${daoHeoBefore}`);
+
+        let isActive = (await lastCampaign.isActive.call());
+        assert.isTrue(isActive, `Expecting campaign to be active after failed attempt to close, but got ${isActive}`);
+        //close by owner
+        balanceBefore = await iToken.balanceOf.call(charityWorker);
+        daoHeoBefore = await iToken.balanceOf(iDAO.address);
+        await lastCampaign.close({from: charityWorker});
+        daoHeoAfter = await iToken.balanceOf(iDAO.address);
+        balanceAfter = await iToken.balanceOf.call(charityWorker);
+        isActive = (await lastCampaign.isActive.call());
+        assert.isFalse(isActive, `Expecting campaign to be closed after successful attempt to close, but got ${isActive}`);
+        let delta = heoLocked.sub(heoSpent);
+        assert.isTrue(balanceBefore.add(delta).eq(balanceAfter),
+            `Expecting charity's HEO balance to go up by ${delta}. Found before: ${balanceBefore}, after: ${balanceAfter}`);
+        assert.isTrue(daoHeoBefore.eq(daoHeoAfter),
+            `Expecting DAO's HEO balance to remain the same. Found before: ${daoHeoBefore}, after: ${daoHeoAfter}`);
+        assert.isFalse(isActive, `Expecting campaign to be inactive after it was closed, but got ${isActive}`);
     });
+
     it("Should enforce white list for creating campaigns", async () => {
         //enable fundraiser whitelist by vote
         await iDAO.proposeVote(0, 0, KEY_ENABLE_FUNDRAISER_WHITELIST, [], [1], 259201, 51,
@@ -519,4 +600,6 @@ contract("HEOCampaignFactory", (accounts) => {
         assert.equal("0x0000000000000000000000000000000000000000", targetToken,
             `Expected campaign currency address to be 0x0000000000000000000000000000000000000000, but got ${targetToken}`);
     });
+
+
 });

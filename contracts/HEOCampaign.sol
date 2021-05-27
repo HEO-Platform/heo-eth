@@ -204,10 +204,34 @@ contract HEOCampaign is IHEOCampaign, Ownable, ReentrancyGuard {
         return _metaDataUrl;
     }
 
+    function changeMaxAmount(uint256 newMaxAmount) external override onlyOwner() {
+        require(newMaxAmount > _raisedFunds, "HEOCampaign: newMaxAmount cannot be lower than amount raised");
+        if(_heoLocked > 0) {
+            uint256 heoRequired = _dao.heoParams().calculateFee(newMaxAmount).div(_heoPrice).mul(_heoPriceDecimals);
+            if(heoRequired > _heoLocked) {
+                //lock more HEO
+                uint256 heoDelta = heoRequired.sub(_heoLocked);
+                ERC20(_heoAddr).safeTransferFrom(_msgSender(), address(this), heoDelta);
+                _heoLocked = _heoLocked.add(heoDelta);
+            } else if(heoRequired < _heoLocked) {
+                //refund some HEO
+                uint256 heoDelta = _heoLocked.sub(heoRequired);
+                ERC20(_heoAddr).safeTransfer(_msgSender(), heoDelta);
+                _heoLocked = _heoLocked.sub(heoDelta);
+            }
+        }
+        _maxAmount = newMaxAmount;
+    }
     function close() external override onlyOwner() {
         require(_isActive, "HEOCampaign: this campaign is no longer active");
+        //refund unspent HEO
+        if(_heoLocked > 0) {
+            uint256 balance = ERC20(_heoAddr).balanceOf(address(this));
+            if(balance > 0) {
+                ERC20(_heoAddr).safeTransfer(_msgSender(), balance);
+            }
+        }
         _isActive = false;
-        //TODO: refund unspent HEO
     }
     /*
     * Override default Ownable::renounceOwnership to make sure

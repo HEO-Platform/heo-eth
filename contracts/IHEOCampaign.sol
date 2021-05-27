@@ -10,4 +10,5 @@ interface IHEOCampaign {
     function raisedAmount() external view returns (uint256);
     function currency() external view returns (address);
     function close() external;
+    function changeMaxAmount(uint256 newMaxAmount) external;
 }
