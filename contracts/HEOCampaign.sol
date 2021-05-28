@@ -205,7 +205,7 @@ contract HEOCampaign is IHEOCampaign, Ownable, ReentrancyGuard {
     }
 
     function changeMaxAmount(uint256 newMaxAmount) external override onlyOwner() {
-        require(newMaxAmount > _raisedFunds, "HEOCampaign: newMaxAmount cannot be lower than amount raised");
+        require(newMaxAmount >= _raisedFunds, "HEOCampaign: newMaxAmount cannot be lower than amount raised");
         if(_heoLocked > 0) {
             uint256 heoRequired = _dao.heoParams().calculateFee(newMaxAmount).div(_heoPrice).mul(_heoPriceDecimals);
             if(heoRequired > _heoLocked) {
