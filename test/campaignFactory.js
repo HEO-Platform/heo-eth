@@ -601,5 +601,111 @@ contract("HEOCampaignFactory", (accounts) => {
             `Expected campaign currency address to be 0x0000000000000000000000000000000000000000, but got ${targetToken}`);
     });
 
+    it("Should allow changing maxAmount for reward campaign", async () => {
+        let myCampaigns = await iRegistry.myCampaigns.call({from: charityAccount});
+        let countBefore = myCampaigns.length;
+        // set fee to 5%
+        await iDAO.proposeVote(0, 0, KEY_FUNDRAISING_FEE, [], [500], 259201, 51, {from: founder1});
+        let events = await iDAO.getPastEvents('ProposalCreated');
+        let proposalId = events[0].returnValues.proposalId;
+        await iDAO.vote(proposalId, 1, ONE_COIN, {from: founder1});
+        await iDAO.vote(proposalId, 1, ONE_COIN, {from: founder2});
+        await iDAO.vote(proposalId, 1, ONE_COIN, {from: founder3});
+        await iDAO.executeProposal(proposalId, {from: founder2});
 
+        //give some HEO to the charity account
+        let balanceBefore = await iToken.balanceOf.call(charityAccount);
+        await iCharityBudget.sendTo(charityAccount, platformTokenAddress, web3.utils.toWei("5"), {from: treasurer});
+        let balanceAfter = await iToken.balanceOf.call(charityAccount);
+        assert.isTrue(balanceAfter.eq(balanceBefore.add(new BN(web3.utils.toWei("5")))),
+            `Expecting charity's HEO balance to go up by 5 HEO, but found ${balanceAfter}`);
+        iPriceOracle.setPrice("0x0000000000000000000000000000000000000000", 1, 1);
+
+        //deploy a campaign
+        await iToken.approve(iCampaignFactory.address, web3.utils.toWei("5"), {from: charityAccount});
+        await iCampaignFactory.createRewardCampaign(web3.utils.toWei("100"), "0x0000000000000000000000000000000000000000",
+            "https://someurl1", charityAccount, {from: charityAccount});
+
+        myCampaigns = await iRegistry.myCampaigns.call({from: charityAccount});
+        let countAfter = myCampaigns.length;
+        assert.equal(countBefore+1, countAfter, "Should have one more campaign registered.");
+
+        balanceAfter = await iToken.balanceOf.call(charityAccount);
+        assert.isTrue(balanceAfter.eq(balanceBefore),
+            `Expecting charity's HEO balance to go down by 5 HEO, but found ${balanceAfter}`);
+
+        var lastCampaign = myCampaigns[countAfter-1];
+
+        balanceAfter = await iToken.balanceOf.call(lastCampaign);
+        assert.isTrue(balanceAfter.eq(new BN(web3.utils.toWei("5"))),
+            `Expecting campaign to have 5 HEO, but found ${balanceAfter}`);
+
+        lastCampaign = await HEOCampaign.at(lastCampaign);
+        assert.isNotNull(lastCampaign, "Last campaign is null");
+        var maxAmount = await lastCampaign.maxAmount.call();
+        assert.isTrue(maxAmount.eq(new BN(web3.utils.toWei("100"))), `Expected maxAmount to be 100 ETH, but got ${maxAmount}`);
+        var heoLocked = await lastCampaign.heoLocked.call();
+        assert.isTrue(heoLocked.eq(new BN(web3.utils.toWei("5"))), `Expected heoLocked to be 5 HEO, but got ${heoLocked}`);
+        var raisedAmount = (await lastCampaign.raisedAmount.call()).toNumber()
+        assert.equal(raisedAmount, 0, `Expected raisedAmount to be 0, but got ${raisedAmount}`);
+        let isActive = (await lastCampaign.isActive.call());
+        assert.isTrue(isActive, `Expecting campaign to be active, but got ${isActive}`);
+
+        //try changing maxAmount by non-owner
+        balanceBefore = await iToken.balanceOf.call(charityAccount);
+        try {
+            await lastCampaign.changeMaxAmount(web3.utils.toWei("80"), {from: founder1});
+            assert.fail("Non-owner should not be able to change maxAmount");
+        } catch(err) {
+            assert.equal(err.reason,
+                "Ownable: caller is not the owner", `Wrong error message ${err}`);
+        }
+        isActive = (await lastCampaign.isActive.call());
+        assert.isTrue(isActive, `Expecting campaign to be active, but got ${isActive}`);
+        balanceAfter = await iToken.balanceOf.call(charityAccount);
+        assert.isTrue(balanceAfter.eq(balanceBefore),
+            `Expecting charity's HEO balance to remain unchanged, but found ${balanceAfter}`);
+
+        //change maxAmount to 80 by owner
+        await lastCampaign.changeMaxAmount(web3.utils.toWei("80"), {from: charityAccount});
+        isActive = (await lastCampaign.isActive.call());
+        assert.isTrue(isActive, `Expecting campaign to be still be active, but got ${isActive}`);
+        maxAmount = await lastCampaign.maxAmount.call();
+        assert.isTrue(maxAmount.eq(new BN(web3.utils.toWei("80"))), `Expected maxAmount to be 80 ETH, but got ${maxAmount}`);
+
+        //verify that 1 HEO was refunded
+        balanceAfter = await iToken.balanceOf.call(lastCampaign.address);
+        assert.isTrue(balanceAfter.eq(new BN(web3.utils.toWei("4"))),
+            `Expecting campaign to have 4 HEO after lowering maxAmount, but found ${balanceAfter}`);
+        balanceAfter = await iToken.balanceOf.call(charityAccount);
+        assert.isTrue(balanceAfter.eq(balanceBefore.add(new BN(web3.utils.toWei("1")))),
+            `Expecting charity's HEO balance to go up by 1 HEO, but found ${balanceAfter}`);
+
+        balanceBefore = await iToken.balanceOf.call(charityAccount);
+        await lastCampaign.donateNative({from: donorAccount, value: web3.utils.toWei("20", "ether")});
+        try {
+            await lastCampaign.changeMaxAmount(web3.utils.toWei("9"), {from: charityAccount});
+            assert.fail("Should not be able to change maxAmount below donated amount");
+        } catch (err) {
+            assert.equal(err.reason,
+                "HEOCampaign: newMaxAmount cannot be lower than amount raised", `Wrong error message ${err}`);
+        }
+        balanceAfter = await iToken.balanceOf.call(charityAccount);
+        assert.isTrue(balanceAfter.eq(balanceBefore),
+            `Expecting charity's HEO balance to remain unchanged, but found ${balanceAfter}`);
+
+        await lastCampaign.changeMaxAmount(web3.utils.toWei("20"), {from: charityAccount});
+        isActive = (await lastCampaign.isActive.call());
+        assert.isFalse(isActive, `Expecting campaign to be inactive, but got ${isActive}`);
+        maxAmount = await lastCampaign.maxAmount.call();
+        assert.isTrue(maxAmount.eq(new BN(web3.utils.toWei("20"))), `Expected maxAmount to be 20 ETH, but got ${maxAmount}`);
+
+        //verify that 3 HEO was refunded
+        balanceAfter = await iToken.balanceOf.call(lastCampaign.address);
+        assert.isTrue(balanceAfter.eq(new BN(web3.utils.toWei("0"))),
+            `Expecting campaign to have 0 HEO after lowering maxAmount, but found ${balanceAfter}`);
+        balanceAfter = await iToken.balanceOf.call(charityAccount);
+        assert.isTrue(balanceAfter.eq(balanceBefore.add(new BN(web3.utils.toWei("3")))),
+            `Expecting charity's HEO balance to go up by 3 HEO, but found ${balanceAfter}`);
+    });
 });

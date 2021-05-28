@@ -48,9 +48,9 @@ contract("HEOCampaign", (accounts) => {
         await daoInstance.deployPlatformToken(new BN("100000000000000000000000000"),
             "Help Each Other platform token", "HEO", {from: founder1});
         platformTokenAddress = await paramsInstance.contractAddress.call(KEY_PLATFORM_TOKEN_ADDRESS);
-        let tokenInstance = await HEOToken.at(platformTokenAddress);
+        iToken = await HEOToken.at(platformTokenAddress);
         for(let i=0; i < 3; i++) {
-            await tokenInstance.approve(stakingInstance.address, ONE_COIN, {from: accounts[i]})
+            await iToken.approve(stakingInstance.address, ONE_COIN, {from: accounts[i]})
             await daoInstance.registerToVote(ONE_COIN, platformTokenAddress, {from: accounts[i]});
         }
 
@@ -499,6 +499,98 @@ contract("HEOCampaign", (accounts) => {
         isActive = (await campaign.isActive.call());
         assert.isFalse(isActive, `Expecting campaign to be closed after successful attempt to close, but got ${isActive}`);
     })
+    it("Should allow changing maxAmount for non-reward campaigns", async() => {
+        //deploy campaign to collect unlimited native coin
+        let campaign = await HEOCampaign.new(0, charityAccount, "0x0000000000000000000000000000000000000000",
+            "https://someurl1", daoInstance.address, 0, 0, 0, 0, 0, "0x0000000000000000000000000000000000000000",
+            {from: charityWorker});
+        let heoPrice = (await campaign.heoPrice.call()).toNumber();
+        assert.equal(heoPrice, 0, `Expecting heoPrice = 0, but got ${heoPrice}`);
+        let isActive = (await campaign.isActive.call());
+        assert.isTrue(isActive, `Expecting campaign to be active, but got ${isActive}`);
+        let addrCheck = await campaign.beneficiary.call();
+        assert.equal(addrCheck, charityAccount, `Expecting beneficiary to be ${charityAccount} but found ${addrCheck}`);
+        addrCheck = await campaign.owner.call();
+        assert.equal(addrCheck, charityWorker, `Expecting owner to be ${charityWorker} but found ${addrCheck}`);
+
+        let maxAmount = (await campaign.maxAmount.call()).toNumber();
+        assert.equal(maxAmount, 0, `Expecting maxAmount = 0, but got ${maxAmount}`);
+        try {
+            await campaign.changeMaxAmount(web3.utils.toWei("100"), {from: charityAccount});
+            assert.fail("Non-owner should not be able to change maxAmount");
+        } catch (err) {
+            assert.equal(err.reason,
+                "Ownable: caller is not the owner", `Wrong error message ${err}`);
+        }
+        await campaign.changeMaxAmount(web3.utils.toWei("100"), {from: charityWorker});
+        maxAmount = await campaign.maxAmount.call();
+        assert.isTrue(maxAmount.eq(new BN(web3.utils.toWei("100"))),
+            `Expecting maxAmount = 100 BNB, but got ${maxAmount}`);
+
+        await campaign.changeMaxAmount(web3.utils.toWei("90"), {from: charityWorker});
+        maxAmount = await campaign.maxAmount.call();
+        assert.isTrue(maxAmount.eq(new BN(web3.utils.toWei("90"))),
+            `Expecting maxAmount = 100 BNB, but got ${maxAmount}`);
+
+        await campaign.donateNative({from: donorAccount, value: web3.utils.toWei("10", "ether")});
+        try {
+            await campaign.changeMaxAmount(web3.utils.toWei("9"), {from: charityWorker});
+            assert.fail("Non-owner should not be able to change maxAmount");
+        } catch (err) {
+            assert.equal(err.reason,
+                "HEOCampaign: newMaxAmount cannot be lower than amount raised", `Wrong error message ${err}`);
+        }
+        await campaign.changeMaxAmount(web3.utils.toWei("11"), {from: charityWorker});
+        maxAmount = await campaign.maxAmount.call();
+        assert.isTrue(maxAmount.eq(new BN(web3.utils.toWei("11"))),
+            `Expecting maxAmount = 11 BNB, but got ${maxAmount}`);
+        await campaign.changeMaxAmount(web3.utils.toWei("10"), {from: charityWorker});
+        maxAmount = await campaign.maxAmount.call();
+        assert.isTrue(maxAmount.eq(new BN(web3.utils.toWei("10"))),
+            `Expecting maxAmount = 10 BNB, but got ${maxAmount}`);
+    })
+
+    it("Should fail to maxAmount for reward campaigns when the campaign has no HEO", async() => {
+        //send 25M HEO to the reward farm
+        await daoInstance.proposeVote(2, 3, 0, [iRewardFarm.address, platformTokenAddress],
+            [web3.utils.toWei("25000000")], 259201, 51, {from: founder1});
+        let events = await daoInstance.getPastEvents('ProposalCreated');
+        let proposalId = events[0].returnValues.proposalId;
+
+        //cast votes
+        await daoInstance.vote(proposalId, 1, ONE_COIN, {from: founder1});
+        await daoInstance.vote(proposalId, 1, ONE_COIN, {from: founder2});
+        await daoInstance.vote(proposalId, 1, ONE_COIN, {from: founder3});
+
+        //execute the proposal
+        await daoInstance.executeProposal(proposalId, {from: founder1});
+
+        //deploy campaign for 100 USDT
+        let campaign = await HEOCampaign.new(web3.utils.toWei("100"), charityAccount, iTestCoin.address, "https://someu",
+            daoInstance.address, web3.utils.toWei("5"), 100, 10, 500, 10000, platformTokenAddress, {from: charityAccount});
+
+        var myCampaigns = await iRegistry.myCampaigns.call({from: charityAccount});
+        assert.equal(myCampaigns.length, 0, `Should not have any registered campaigns. Found ${myCampaigns}`);
+        let heoLocked = await campaign.heoLocked.call();
+        assert.isTrue(heoLocked.eq(new BN(web3.utils.toWei("5"))), `Expecting heoLocked = 5 HEO, but got ${heoLocked}`);
+        let maxAmount = await campaign.maxAmount.call();
+        assert.isTrue(maxAmount.eq(new BN(web3.utils.toWei("100"))), `Expecting maxAmount = 100  USDT, but got ${maxAmount}`);
+        let heoPrice = (await campaign.heoPrice.call()).toNumber();
+        assert.equal(heoPrice, 100, `Expecting heoPrice = 0, but got ${heoPrice}`);
+        let heoPriceDecimals = (await campaign.heoPriceDecimals.call()).toNumber();
+        assert.equal(heoPriceDecimals, 10, `Expecting heoPriceDecimals = 10, but got ${heoPriceDecimals}`);
+        let isActive = (await campaign.isActive.call());
+        assert.isTrue(isActive, `Expecting campaign to be active, but got ${isActive}`);
+
+        //lower maxAmount by 20%
+        try {
+            await campaign.changeMaxAmount(web3.utils.toWei("80"), {from: charityAccount});
+            assert.fail("Should fail to lower maxAmount when campaign does not have HEO");
+        } catch (err) {
+            assert.equal(err.reason,
+                "ERC20: transfer amount exceeds balance", `Wrong error message ${err}`);
+        }
+    });
 });
 
 advance = async (chainTimeBefore) => {
