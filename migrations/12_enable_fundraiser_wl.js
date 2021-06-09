@@ -20,7 +20,17 @@ module.exports = async function(deployer, network, accounts) {
         await iHEODao.proposeVote(0, 0, KEY_ENABLE_FUNDRAISER_WHITELIST, [], [1], 259201, 51,
             {from: accounts[0]});
         let events = await iHEODao.getPastEvents('ProposalCreated');
-        let proposalId = events[0].returnValues.proposalId;
+        var proposalId;
+        if(events[0] && events[0].returnValues) {
+            proposalId = events[0].returnValues.proposalId;
+        } else {
+            while(!events[0]) {
+                events = await iHEODao.getPastEvents('ProposalCreated');
+                if(events[0] && events[0].returnValues) {
+                    proposalId = events[0].returnValues.proposalId;
+                }
+            }
+        }
 
         await iHEODao.vote(proposalId, 1, ONE_COIN, {from: accounts[0]});
         await iHEODao.vote(proposalId, 1, ONE_COIN, {from: accounts[1]});
@@ -31,7 +41,16 @@ module.exports = async function(deployer, network, accounts) {
             {from: accounts[0]});
 
         events = await iHEODao.getPastEvents('ProposalCreated');
-        proposalId = events[0].returnValues.proposalId;
+        if(events[0] && events[0].returnValues) {
+            proposalId = events[0].returnValues.proposalId;
+        } else {
+            while(!events[0]) {
+                events = await iHEODao.getPastEvents('ProposalCreated');
+                if(events[0] && events[0].returnValues) {
+                    proposalId = events[0].returnValues.proposalId;
+                }
+            }
+        }
 
         await iHEODao.vote(proposalId, 1, ONE_COIN, {from: accounts[0]});
         await iHEODao.vote(proposalId, 1, ONE_COIN, {from: accounts[1]});
@@ -41,7 +60,16 @@ module.exports = async function(deployer, network, accounts) {
         await iHEODao.proposeVote(1, 0, KEY_FUNDRAISER_WHITE_LIST, [accounts[0]], [1], 259201, 51,
             {from: accounts[0]});
         events = await iHEODao.getPastEvents('ProposalCreated');
-        proposalId = events[0].returnValues.proposalId;
+        if(events[0] && events[0].returnValues) {
+            proposalId = events[0].returnValues.proposalId;
+        } else {
+            while(!events[0]) {
+                events = await iHEODao.getPastEvents('ProposalCreated');
+                if(events[0] && events[0].returnValues) {
+                    proposalId = events[0].returnValues.proposalId;
+                }
+            }
+        }
 
         await iHEODao.vote(proposalId, 1, ONE_COIN, {from: accounts[0]});
         await iHEODao.vote(proposalId, 1, ONE_COIN, {from: accounts[1]});

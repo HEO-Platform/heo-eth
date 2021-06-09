@@ -6,6 +6,6 @@ module.exports = async function(deployer, network, accounts) {
         const iHEODao = await HEODAO.deployed();
         await deployer.deploy(HEOPriceOracle);
         const iRewardFarm = await HEOPriceOracle.deployed();
-        console.log(`HEORewardFarm coin address on ${network}: ${iRewardFarm.address}`);
+        console.log(`HEORewardFarm address on ${network}: ${iRewardFarm.address}`);
     }
 }

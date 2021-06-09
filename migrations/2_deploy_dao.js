@@ -8,6 +8,6 @@ module.exports = async function(deployer, network, accounts) {
     await deployer.deploy(HEODAO);
     const iHEODao = await HEODAO.deployed();
     await iHEODao.transferOwnership(accounts[0]);
-    console.log(`HEODAO coin address on ${network}: ${iHEODao.address}`);
+    console.log(`HEODAO address on ${network}: ${iHEODao.address}`);
   }
 }

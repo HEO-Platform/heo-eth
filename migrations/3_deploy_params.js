@@ -8,6 +8,6 @@ module.exports = async function(deployer, network, accounts) {
         const iHEOParams = await HEOParameters.deployed();
         await iHEOParams.transferOwnership(iHEODao.address);
         await iHEODao.setParams(iHEOParams.address);
-        console.log(`HEOParameters coin address on ${network}: ${iHEOParams.address}`);
+        console.log(`HEOParameters address on ${network}: ${iHEOParams.address}`);
     }
 }

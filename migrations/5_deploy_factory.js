@@ -7,6 +7,6 @@ module.exports = async function(deployer, network, accounts) {
         await deployer.deploy(HEOCampaignFactory, iHEODao.address);
         const iCampaignFactory = await HEOCampaignFactory.deployed();
         await iCampaignFactory.transferOwnership(iHEODao.address);
-        console.log(`HEOCampaignFactory coin address on ${network}: ${HEOCampaignFactory.address}`);
+        console.log(`HEOCampaignFactory address on ${network}: ${HEOCampaignFactory.address}`);
     }
 }

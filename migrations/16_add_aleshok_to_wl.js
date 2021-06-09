@@ -9,7 +9,7 @@ module.exports = async function(deployer, network, accounts) {
         console.log(`Accounts are ${accounts[0]}, ${accounts[1]}, ${accounts[2]}`);
         const iHEODao = await HEODAO.deployed();
 
-        await iHEODao.proposeVote(1, 0, KEY_FUNDRAISER_WHITE_LIST, ["0x15cA1562912fA669efdfF1c0D6Dc612fb3D5CfEB"], [1], 259201, 51,
+        await iHEODao.proposeVote(1, 0, KEY_FUNDRAISER_WHITE_LIST, ["0x717E07F631B8875a33Ee9938e9c60a2B2E5DA21c"], [1], 259201, 51,
             {from: accounts[0]});
 
         let events = await iHEODao.getPastEvents('ProposalCreated');

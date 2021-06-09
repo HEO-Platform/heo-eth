@@ -8,6 +8,6 @@ module.exports = async function(deployer, network, accounts) {
         const iStaking = await HEOStaking.deployed();
         await iStaking.transferOwnership(iHEODao.address);
         await iHEODao.setStaking(iStaking.address);
-        console.log(`HEOStaking coin address on ${network}: ${iStaking.address}`);
+        console.log(`HEOStaking address on ${network}: ${iStaking.address}`);
     }
 }
