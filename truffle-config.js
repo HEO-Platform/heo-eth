@@ -51,21 +51,21 @@ module.exports = {
         bsctestnet: {
             provider: () => new HDWalletProvider(mnemonic, `https://data-seed-prebsc-1-s1.binance.org:8545`, 0, 3),
             network_id: 97,
-            confirmations: 10,
+            confirmations: 5,
             timeoutBlocks: 200,
             skipDryRun: true
         },
         bscdev: {
             provider: () => new HDWalletProvider(mnemonic, `https://data-seed-prebsc-1-s1.binance.org:8545`, 0, 3),
             network_id: 97,
-            confirmations: 10,
+            confirmations: 5,
             timeoutBlocks: 200,
             skipDryRun: true
         },
         bsc: {
             provider: () => new HDWalletProvider(mnemonic, `https://bsc-dataseed1.binance.org`),
             network_id: 56,
-            confirmations: 10,
+            confirmations: 5,
             timeoutBlocks: 200,
             skipDryRun: true
         },
