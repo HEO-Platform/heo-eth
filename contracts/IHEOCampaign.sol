@@ -11,4 +11,6 @@ interface IHEOCampaign {
     function currency() external view returns (address);
     function close() external;
     function changeMaxAmount(uint256 newMaxAmount) external;
+    function metaData() external view returns (string memory);
+    function updateMetaData(string memory metaData) external;
 }

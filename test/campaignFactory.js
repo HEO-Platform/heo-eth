@@ -10,6 +10,8 @@ const HEOPriceOracle = artifacts.require("HEOPriceOracle");
 const HEOCampaignRegistry = artifacts.require("HEOCampaignRegistry");
 const StableCoinForTests = artifacts.require("StableCoinForTests");
 const HEORewardFarm = artifacts.require("HEORewardFarm");
+const fs = require('fs');
+const { compress, decompress } = require('shrink-string');
 
 const ONE_COIN = web3.utils.toWei("1");
 var BN = web3.utils.BN;
@@ -30,9 +32,14 @@ const KEY_PRICE_ORACLE = 4;
 const KEY_TREASURER = 6;
 const KEY_REWARD_FARM = 2;
 const KEY_FUNDRAISING_FEE = 8; //default value is 250, which corresponds to 2.5% (0.025)
+var RAW_META = {title:"Test Title", vl:"https://youtube.com/url"};
+var compressed_meta;
 
 contract("HEOCampaignFactory", (accounts) => {
     before(async () => {
+        RAW_META.description = fs.readFileSync("README.md", "utf-8");
+        compressed_meta = await compress(JSON.stringify(RAW_META));
+
         founder1 = accounts[0];
         founder2 = accounts[1];
         founder3 = accounts[2];
@@ -162,8 +169,8 @@ contract("HEOCampaignFactory", (accounts) => {
         let countBefore = myCampaigns.length;
 
         //deploy a campaign
-        await iCampaignFactory.createCampaign(0, "0x0000000000000000000000000000000000000000", "https://someurl1",
-            charityAccount, {from: charityAccount});
+        await iCampaignFactory.createCampaign(0, "0x0000000000000000000000000000000000000000",
+            charityAccount, compressed_meta, {from: charityAccount});
         myCampaigns = await iRegistry.myCampaigns.call({from: charityAccount});
         let countAfter = myCampaigns.length;
         assert.equal(countBefore+1, countAfter, "Should have one more campaign registered.");
@@ -184,6 +191,15 @@ contract("HEOCampaignFactory", (accounts) => {
         var targetToken = await lastCampaign.currency.call();
         assert.equal("0x0000000000000000000000000000000000000000", targetToken,
             `Expected campaign currency address to be 0x0000000000000000000000000000000000000000, but got ${targetToken}`);
+
+        let metaCheckCompressed = await lastCampaign.metaData.call();
+        let metaCheck = await decompress(metaCheckCompressed);
+        assert.equal(compressed_meta, metaCheckCompressed, `Wrong compressed metadata returned from blockchain`);
+        assert.equal(metaCheck, JSON.stringify(RAW_META), `Wrong uncompressed metadata`);
+        metaCheck = JSON.parse(metaCheck);
+        for(var attr in RAW_META) {
+            assert.equal(RAW_META[attr], metaCheck[attr], `Expecting ${attr}=${RAW_META[attr]} but found ${metaCheck[attr]}`);
+        }
 
         let isActive = (await lastCampaign.isActive.call());
         assert.isTrue(isActive, `Expecting campaign to be active, but got ${isActive}`);
@@ -227,14 +243,14 @@ contract("HEOCampaignFactory", (accounts) => {
         //deploy a campaign
         try {
             await iCampaignFactory.createRewardCampaign(web3.utils.toWei("100"), "0x0000000000000000000000000000000000000000",
-                "https://someurl1", charityAccount, {from: charityAccount});
+                charityAccount, compressed_meta, {from: charityAccount});
             assert.fail("This should fail, because charityAccount did not authorize HEO to be spent by the factory")
         } catch(err) {
             assert.equal(err.reason, "ERC20: transfer amount exceeds allowance", `Wrong error: ${err}`);
         }
         await iToken.approve(iCampaignFactory.address, web3.utils.toWei("5"), {from: charityAccount});
         await iCampaignFactory.createRewardCampaign(web3.utils.toWei("100"), "0x0000000000000000000000000000000000000000",
-            "https://someurl1", charityAccount, {from: charityAccount});
+            charityAccount, compressed_meta, {from: charityAccount});
 
         myCampaigns = await iRegistry.myCampaigns.call({from: charityAccount});
         let countAfter = myCampaigns.length;
@@ -326,7 +342,7 @@ contract("HEOCampaignFactory", (accounts) => {
         await iToken.approve(iCampaignFactory.address, web3.utils.toWei("5"), {from: charityAccount});
         try {
             await iCampaignFactory.createRewardCampaign(web3.utils.toWei("100"), "0x0000000000000000000000000000000000000000",
-                "https://someurl1", charityAccount, {from: charityAccount});
+                charityAccount, compressed_meta, {from: charityAccount});
             assert.fail("This should fail, because charityAccount did not authorize enough HEO to be spent by the factory")
         } catch(err) {
             assert.equal(err.reason, "ERC20: transfer amount exceeds allowance", `Wrong error: ${err}`);
@@ -338,7 +354,7 @@ contract("HEOCampaignFactory", (accounts) => {
         let toApprove = "102941176470588235000";
         await iToken.approve(iCampaignFactory.address, toApprove, {from: charityAccount});
         await iCampaignFactory.createRewardCampaign(web3.utils.toWei("100"), "0x0000000000000000000000000000000000000000",
-            "https://someurl1", charityAccount, {from: charityAccount});
+            charityAccount, compressed_meta, {from: charityAccount});
 
         myCampaigns = await iRegistry.myCampaigns.call({from: charityAccount});
         let countAfter = myCampaigns.length;
@@ -403,8 +419,8 @@ contract("HEOCampaignFactory", (accounts) => {
         //try deploying a campaign w/o approving enough HEO
         await iToken.approve(iCampaignFactory.address, web3.utils.toWei("50"), {from: charityWorker});
         try {
-            await iCampaignFactory.createRewardCampaign(web3.utils.toWei("55000"), iTestCoin.address, "https://someurl1",
-                charityAccount, {from: charityWorker});
+            await iCampaignFactory.createRewardCampaign(web3.utils.toWei("55000"), iTestCoin.address,
+                charityAccount, compressed_meta, {from: charityWorker});
             assert.fail("This should fail, because charityAccount did not authorize enough HEO to be spent by the factory")
         } catch(err) {
             assert.equal(err.reason, "ERC20: transfer amount exceeds allowance", `Wrong error: ${err}`);
@@ -415,8 +431,8 @@ contract("HEOCampaignFactory", (accounts) => {
         //approve more HEO and deploy the campaign
         let toApprove = "62500000000000000000";
         await iToken.approve(iCampaignFactory.address, toApprove, {from: charityWorker});
-        await iCampaignFactory.createRewardCampaign(web3.utils.toWei("55000"), iTestCoin.address, "https://someurl1",
-            charityAccount, {from: charityWorker});
+        await iCampaignFactory.createRewardCampaign(web3.utils.toWei("55000"), iTestCoin.address,
+            charityAccount, compressed_meta, {from: charityWorker});
 
         myCampaigns = await iRegistry.myCampaigns.call({from: charityAccount});
         let countAfter = myCampaigns.length;
@@ -520,16 +536,16 @@ contract("HEOCampaignFactory", (accounts) => {
         //try to deploy a campaign
         let newCoin = await StableCoinForTests.new("USDC");
         try {
-            await iCampaignFactory.createCampaign(0, iTestCoin.address, "https://someurl1",
-                charityAccount, {from: charityAccount});
+            await iCampaignFactory.createCampaign(0, iTestCoin.address,
+                charityAccount, compressed_meta, {from: charityAccount});
             assert.fail(`Should fail to deploy unbound campaign from non-whitelisted account`);
         } catch(err) {
             assert.equal(err.reason, "HEOCampaign: account must be white listed", `Wrong error: ${err}`);
         }
 
         try {
-            await iCampaignFactory.createCampaign(web3.utils.toWei("10000"), "0x0000000000000000000000000000000000000000", "https://someurl1",
-                charityAccount, {from: charityAccount});
+            await iCampaignFactory.createCampaign(web3.utils.toWei("10000"), "0x0000000000000000000000000000000000000000",
+                charityAccount, compressed_meta, {from: charityAccount});
             assert.fail(`Should fail to deploy native campaign from non-whitelisted account`);
         } catch(err) {
             assert.equal(err.reason, "HEOCampaign: account must be white listed to raise ETH", `Wrong error: ${err}`);
@@ -551,8 +567,8 @@ contract("HEOCampaignFactory", (accounts) => {
         await iDAO.executeProposal(proposalId, {from: founder2});
 
         //deploy unbound campaign
-        await iCampaignFactory.createCampaign(0, iTestCoin.address, "https://someurl1",
-            charityAccount, {from: charityAccount});
+        await iCampaignFactory.createCampaign(0, iTestCoin.address,
+            charityAccount, compressed_meta, {from: charityAccount});
 
         myCampaigns = await iRegistry.myCampaigns.call({from: charityAccount});
         countAfter = myCampaigns.length;
@@ -578,7 +594,7 @@ contract("HEOCampaignFactory", (accounts) => {
         //deploy native campaign
         countBefore = countAfter;
         await iCampaignFactory.createCampaign(web3.utils.toWei("10000"), "0x0000000000000000000000000000000000000000",
-            "https://someurl1", charityAccount, {from: charityAccount});
+            charityAccount, compressed_meta, {from: charityAccount});
         myCampaigns = await iRegistry.myCampaigns.call({from: charityAccount});
         countAfter = myCampaigns.length;
         assert.equal(countBefore+1, countAfter, "Should have one more registered campaigns.");
@@ -624,7 +640,7 @@ contract("HEOCampaignFactory", (accounts) => {
         //deploy a campaign
         await iToken.approve(iCampaignFactory.address, web3.utils.toWei("5"), {from: charityAccount});
         await iCampaignFactory.createRewardCampaign(web3.utils.toWei("100"), "0x0000000000000000000000000000000000000000",
-            "https://someurl1", charityAccount, {from: charityAccount});
+            charityAccount, compressed_meta, {from: charityAccount});
 
         myCampaigns = await iRegistry.myCampaigns.call({from: charityAccount});
         let countAfter = myCampaigns.length;

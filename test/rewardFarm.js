@@ -11,6 +11,9 @@ const HEOCampaignRegistry = artifacts.require("HEOCampaignRegistry");
 const StableCoinForTests = artifacts.require("StableCoinForTests");
 const HEORewardFarm = artifacts.require("HEORewardFarm");
 const ONE_COIN = web3.utils.toWei("1");
+const fs = require('fs');
+const { compress, decompress } = require('shrink-string');
+
 var BN = web3.utils.BN;
 const timeMachine = require('ganache-time-traveler');
 var founder1, founder2, founder3, charityAccount, donorAccount2, donorAccount, treasurer;
@@ -25,9 +28,12 @@ const KEY_ACCEPTED_COINS = 4;
 const KEY_PRICE_ORACLE = 4;
 const KEY_TREASURER = 6;
 const KEY_REWARD_FARM = 2;
-const KEY_FUNDRAISING_FEE = 8; //default value is 250, which corresponds to 2.5% (0.025)
+var RAW_META = {title:"Test Title", vl:"https://youtube.com/url"};
+var compressed_meta;
+
 contract("HEORewardFarm", (accounts) => {
     before(async () => {
+        compressed_meta = await compress(JSON.stringify(RAW_META));
         founder1 = accounts[0];
         founder2 = accounts[1];
         founder3 = accounts[2];
@@ -174,8 +180,8 @@ contract("HEORewardFarm", (accounts) => {
         await iDAO.executeProposal(proposalId, {from: founder1});
 
         //deploy campaign for 100 USDT
-        let campaign = await HEOCampaign.new(web3.utils.toWei("100"), charityAccount, iTestCoin.address, "https://someu",
-            iDAO.address, web3.utils.toWei("5"), 100, 10, 500, 10000, platformTokenAddress, {from: charityAccount});
+        let campaign = await HEOCampaign.new(web3.utils.toWei("100"), charityAccount, iTestCoin.address, iDAO.address,
+            web3.utils.toWei("5"), 100, 10, 500, 10000, platformTokenAddress, compressed_meta, {from: charityAccount});
 
         var myCampaigns = await iRegistry.myCampaigns.call({from: charityAccount});
         assert.equal(myCampaigns.length, 0, `Should not have any registered campaigns. Found ${myCampaigns}`);
@@ -220,7 +226,7 @@ contract("HEORewardFarm", (accounts) => {
         await iCharityBudget.sendTo(charityAccount, platformTokenAddress, web3.utils.toWei("1"), {from: treasurer});
         await iToken.approve(iCampaignFactory.address, web3.utils.toWei("1"), {from: charityAccount});
         await iCampaignFactory.createRewardCampaign(web3.utils.toWei("1000"), iTestCoin.address,
-            "https://someurl1", charityAccount, {from: charityAccount});
+            charityAccount, compressed_meta, {from: charityAccount});
         let myCampaigns = await iRegistry.myCampaigns.call({from: charityAccount});
         let campaign = myCampaigns[0];
 
@@ -325,7 +331,7 @@ contract("HEORewardFarm", (accounts) => {
         await iCharityBudget.sendTo(charityAccount, platformTokenAddress, web3.utils.toWei("250000"), {from: treasurer});
         await iToken.approve(iCampaignFactory.address, web3.utils.toWei("250000"), {from: charityAccount});
         await iCampaignFactory.createRewardCampaign(web3.utils.toWei("1000000"), iTestCoin.address,
-            "https://someurl1", charityAccount, {from: charityAccount});
+            charityAccount, compressed_meta, {from: charityAccount});
         let myCampaigns = await iRegistry.myCampaigns.call({from: charityAccount});
         let campaign = myCampaigns[0];
         campaign = await HEOCampaign.at(campaign);
@@ -420,7 +426,7 @@ contract("HEORewardFarm", (accounts) => {
         await iCharityBudget.sendTo(charityAccount, platformTokenAddress, web3.utils.toWei("250000"), {from: treasurer});
         await iToken.approve(iCampaignFactory.address, web3.utils.toWei("250000"), {from: charityAccount});
         await iCampaignFactory.createRewardCampaign(web3.utils.toWei("1000000"), iTestCoin.address,
-            "https://someurl1", charityAccount, {from: charityAccount});
+            charityAccount, compressed_meta, {from: charityAccount});
         let myCampaigns = await iRegistry.myCampaigns.call({from: charityAccount});
         let campaign = myCampaigns[0];
         campaign = await HEOCampaign.at(campaign);
@@ -481,7 +487,7 @@ contract("HEORewardFarm", (accounts) => {
         await iCharityBudget.sendTo(charityAccount, platformTokenAddress, web3.utils.toWei("1250"), {from: treasurer});
         await iToken.approve(iCampaignFactory.address, web3.utils.toWei("1250"), {from: charityAccount});
         await iCampaignFactory.createRewardCampaign(web3.utils.toWei("5000"), iTestCoin.address,
-            "https://someurl1", charityAccount, {from: charityAccount});
+            charityAccount, compressed_meta, {from: charityAccount});
         let myCampaigns = await iRegistry.myCampaigns.call({from: charityAccount});
         let campaign = myCampaigns[0];
         campaign = await HEOCampaign.at(campaign);
@@ -493,7 +499,7 @@ contract("HEORewardFarm", (accounts) => {
         await iCharityBudget.sendTo(founder1, platformTokenAddress, web3.utils.toWei("625"), {from: treasurer});
         await iToken.approve(iCampaignFactory.address, web3.utils.toWei("625"), {from: founder1});
         await iCampaignFactory.createRewardCampaign(web3.utils.toWei("5000"), iTestCoin.address,
-            "https://someurl1", founder1, {from: founder1});
+            founder1, compressed_meta, {from: founder1});
         myCampaigns = await iRegistry.myCampaigns.call({from: founder1});
         let campaign2 = myCampaigns[0];
         campaign2 = await HEOCampaign.at(campaign2)

@@ -8,7 +8,8 @@ const HEOCampaignFactory = artifacts.require("HEOCampaignFactory");
 const HEORewardFarm = artifacts.require("HEORewardFarm");
 const StableCoinForTests = artifacts.require("StableCoinForTests");
 const timeMachine = require('ganache-time-traveler');
-
+const fs = require('fs');
+const { compress, decompress } = require('shrink-string');
 const REWARD_PERIOD = 10;
 const KEY_ACCEPTED_COINS = 4;
 const KEY_PLATFORM_TOKEN_ADDRESS = 5;
@@ -20,6 +21,17 @@ const KEY_ENABLE_FUNDRAISER_WHITELIST = 11;
 const KEY_ANON_CAMPAIGN_LIMIT = 12;
 const KEY_FUNDRAISER_WHITE_LIST = 5;
 const ONE_COIN = web3.utils.toWei("1");
+var RAW_META = {
+    title:"Testing branch addToDb-40. Test 1",
+    description:"BLah Blah blah",
+    mainImageURL:"https://heodevmeta.s3.amazonaws.com/images/0331735-8dc-a3d8-1552-a5e646d2553.jpeg",
+    fn:"Greg",
+    ln:"Solovyev",
+    org:"HEO Dev",
+    cn:"",
+    vl:"https://youtu.be/uODBjB9Y7so"
+}
+var compressed_meta;
 
 var BN = web3.utils.BN;
 var founder1, founder2, founder3, charityAccount, charityWorker, donorAccount, treasurer;
@@ -112,11 +124,18 @@ contract("HEOCampaign", (accounts) => {
         await daoInstance.vote(proposalId, 1, ONE_COIN, {from: founder2});
         await daoInstance.vote(proposalId, 1, ONE_COIN, {from: founder3});
         await daoInstance.executeProposal(proposalId, {from: founder1});
+        RAW_META.description = fs.readFileSync("README.md", "utf-8");
+        compressed_meta = await compress(JSON.stringify(RAW_META));
+        console.log(`raw data size ${ JSON.stringify(RAW_META).length}`);
+        console.log(`compressed data size ${compressed_meta.length}`);
+        console.log(`compressed data type is ${typeof compressed_meta}`);
+        console.log(`compressed data is ${compressed_meta}`);
     });
     it("Should not allow donations from campaign owner or from beneficiary", async() => {
         //deploy campaign to collect unlimited native coin
         let campaign = await HEOCampaign.new(0, charityAccount, "0x0000000000000000000000000000000000000000",
-            "https://someurl1", daoInstance.address, 0, 0, 0, 0, 0, "0x0000000000000000000000000000000000000000", {from: charityWorker});
+            daoInstance.address, 0, 0, 0, 0, 0, "0x0000000000000000000000000000000000000000",
+            compressed_meta, {from: charityWorker});
         let heoPrice = (await campaign.heoPrice.call()).toNumber();
         assert.equal(heoPrice, 0, `Expecting heoPrice = 0, but got ${heoPrice}`);
         let isActive = (await campaign.isActive.call());
@@ -125,7 +144,14 @@ contract("HEOCampaign", (accounts) => {
         assert.equal(addrCheck, charityAccount, `Expecting beneficiary to be ${charityAccount} but found ${addrCheck}`);
         addrCheck = await campaign.owner.call();
         assert.equal(addrCheck, charityWorker, `Expecting owner to be ${charityWorker} but found ${addrCheck}`);
-
+        let metaCheckCompressed = await campaign.metaData.call();
+        let metaCheck = await decompress(metaCheckCompressed);
+        assert.equal(compressed_meta, metaCheckCompressed, `Wrong compressed metadata returned from blockchain`);
+        assert.equal(metaCheck, JSON.stringify(RAW_META), `Wrong uncompressed metadata`);
+        metaCheck = JSON.parse(metaCheck);
+        for(var attr in RAW_META) {
+            assert.equal(RAW_META[attr], metaCheck[attr], `Expecting ${attr}=${RAW_META[attr]} but found ${metaCheck[attr]}`);
+        }
         let charityBefore = await web3.eth.getBalance(charityAccount);
         let daoBefore = await web3.eth.getBalance(daoInstance.address);
 
@@ -161,8 +187,9 @@ contract("HEOCampaign", (accounts) => {
         //initialize new stable-coin
         let newCoin = await StableCoinForTests.new("USDC");
         try {
-            let campaign = await HEOCampaign.new(0, charityAccount, newCoin.address, "https://someurl1",
-                daoInstance.address, 0, 0, 0, 0, 0, "0x0000000000000000000000000000000000000000", {from: charityAccount});
+            let campaign = await HEOCampaign.new(0, charityAccount, newCoin.address,
+                daoInstance.address, 0, 0, 0, 0, 0, "0x0000000000000000000000000000000000000000", compressed_meta,
+                {from: charityAccount});
             assert.fail("Should not be able to create the campaign");
         } catch (err) {
             assert.equal(err.reason, "HEOCampaign: currency is not accepted as donation",
@@ -183,8 +210,9 @@ contract("HEOCampaign", (accounts) => {
         await daoInstance.executeProposal(proposalId, {from: founder2});
 
         //now should be able to create the campaign
-        let campaign = await HEOCampaign.new(0, charityAccount, newCoin.address, "https://someurl1",
-            daoInstance.address, 0, 0, 0, 0, 0, "0x0000000000000000000000000000000000000000", {from: charityAccount});
+        let campaign = await HEOCampaign.new(0, charityAccount, newCoin.address,
+            daoInstance.address, 0, 0, 0, 0, 0, "0x0000000000000000000000000000000000000000", compressed_meta,
+            {from: charityAccount});
         await newCoin.transfer(donorAccount, web3.utils.toWei("10000"));
         await newCoin.approve(campaign.address, web3.utils.toWei("10"), {from: donorAccount});
         await campaign.donateERC20(web3.utils.toWei("10"), {from: donorAccount});
@@ -200,7 +228,8 @@ contract("HEOCampaign", (accounts) => {
     it("Native campaign should allow native donations and reject ERC20 donations", async() => {
         //deploy campaign to collect unlimited native coin
         let campaign = await HEOCampaign.new(0, charityAccount, "0x0000000000000000000000000000000000000000",
-            "https://someurl1", daoInstance.address, 0, 0, 0, 0, 0, "0x0000000000000000000000000000000000000000", {from: charityWorker});
+             daoInstance.address, 0, 0, 0, 0, 0, "0x0000000000000000000000000000000000000000", compressed_meta,
+            {from: charityWorker});
         let heoPrice = (await campaign.heoPrice.call()).toNumber();
         assert.equal(heoPrice, 0, `Expecting heoPrice = 0, but got ${heoPrice}`);
         let isActive = (await campaign.isActive.call());
@@ -242,8 +271,9 @@ contract("HEOCampaign", (accounts) => {
     });
     it("ERC-20 based campaign should allow ERC-20 donations and reject native donations", async() => {
         //deploy campaign to collect unlimited stablecoins
-        let campaignInstance = await HEOCampaign.new(0, charityAccount, iTestCoin.address, "https://someurl1",
-            daoInstance.address, 0, 0, 0, 0, 0, "0x0000000000000000000000000000000000000000", {from: charityAccount});
+        let campaignInstance = await HEOCampaign.new(0, charityAccount, iTestCoin.address,
+            daoInstance.address, 0, 0, 0, 0, 0, "0x0000000000000000000000000000000000000000", compressed_meta,
+            {from: charityAccount});
         let myCampaigns = await iRegistry.myCampaigns.call({from: charityAccount});
         assert.equal(myCampaigns.length, 0, `Should not have any registered campaigns. Found ${myCampaigns}`);
         let heoLocked = (await campaignInstance.heoLocked.call()).toNumber();
@@ -286,8 +316,9 @@ contract("HEOCampaign", (accounts) => {
 
     it("Should deploy a campaign with 0% reward when reward farm is empty", async() => {
         //deploy campaign for 100 USDT
-        let campaign = await HEOCampaign.new(web3.utils.toWei("100"), charityAccount, iTestCoin.address, "https://someu",
-            daoInstance.address, web3.utils.toWei("5"), 100, 10, 500, 10000, platformTokenAddress, {from: charityAccount});
+        let campaign = await HEOCampaign.new(web3.utils.toWei("100"), charityAccount, iTestCoin.address,
+            daoInstance.address, web3.utils.toWei("5"), 100, 10, 500, 10000, platformTokenAddress, compressed_meta,
+            {from: charityAccount});
 
         var myCampaigns = await iRegistry.myCampaigns.call({from: charityAccount});
         assert.equal(myCampaigns.length, 0, `Should not have any registered campaigns. Found ${myCampaigns}`);
@@ -320,8 +351,9 @@ contract("HEOCampaign", (accounts) => {
         await daoInstance.executeProposal(proposalId, {from: founder1});
 
         //deploy campaign for 100 USDT
-        let campaign = await HEOCampaign.new(web3.utils.toWei("100"), charityAccount, iTestCoin.address, "https://someu",
-            daoInstance.address, web3.utils.toWei("5"), 100, 10, 500, 10000, platformTokenAddress, {from: charityAccount});
+        let campaign = await HEOCampaign.new(web3.utils.toWei("100"), charityAccount, iTestCoin.address,
+            daoInstance.address, web3.utils.toWei("5"), 100, 10, 500, 10000, platformTokenAddress, compressed_meta,
+            {from: charityAccount});
 
         var myCampaigns = await iRegistry.myCampaigns.call({from: charityAccount});
         assert.equal(myCampaigns.length, 0, `Should not have any registered campaigns. Found ${myCampaigns}`);
@@ -362,24 +394,26 @@ contract("HEOCampaign", (accounts) => {
 
         //try to deploy campaign
         try {
-            await HEOCampaign.new(0, charityAccount, iTestCoin.address, "https://someurl1",
-                daoInstance.address, 0, 0, 0, 0, 0, platformTokenAddress, {from: charityAccount});
+            await HEOCampaign.new(0, charityAccount, iTestCoin.address,
+                daoInstance.address, 0, 0, 0, 0, 0, platformTokenAddress, compressed_meta,
+                {from: charityAccount});
             assert.fail(`Should fail to deploy unbound campaign from non-whitelisted account`);
         } catch(err) {
             assert.equal(err.reason, "HEOCampaign: account must be white listed", `Wrong error: ${err}`);
         }
         try {
             await HEOCampaign.new(web3.utils.toWei("100"), charityAccount,
-                "0x0000000000000000000000000000000000000000", "https://someurl1",
-                daoInstance.address, 0, 0, 0, 0, 0, platformTokenAddress, {from: charityAccount});
+                "0x0000000000000000000000000000000000000000",
+                daoInstance.address, 0, 0, 0, 0, 0, platformTokenAddress, compressed_meta,
+                {from: charityAccount});
             assert.fail(`Should fail to deploy native campaign from non-whitelisted account`);
         } catch(err) {
             assert.equal(err.reason, "HEOCampaign: account must be white listed to raise ETH", `Wrong error: ${err}`);
         }
         try {
             await HEOCampaign.new(web3.utils.toWei("10001"), charityAccount,
-                iTestCoin.address, "https://someurl1", daoInstance.address, 1, 0, 0, 0, 0, platformTokenAddress,
-                {from: charityAccount});
+                iTestCoin.address,  daoInstance.address, 1, 0, 0, 0, 0, platformTokenAddress,
+                compressed_meta, {from: charityAccount});
             assert.fail(`Should fail to deploy campaign above anonymous limit`);
         } catch(err) {
             assert.equal(err.reason,
@@ -387,7 +421,8 @@ contract("HEOCampaign", (accounts) => {
         }
 
         let campaign = await HEOCampaign.new(web3.utils.toWei("9999"), charityAccount, iTestCoin.address,
-            "https://someurl1", daoInstance.address, 1, 0, 0, 0, 0, platformTokenAddress, {from: charityAccount});
+             daoInstance.address, 1, 0, 0, 0, 0, platformTokenAddress, compressed_meta,
+            {from: charityAccount});
         let currency = await campaign.currency.call();
         assert.equal(currency, iTestCoin.address, `Expecting currency to be ${iTestCoin.address}, but got ${currency}`);
         let heoPrice = (await campaign.heoPrice.call()).toNumber();
@@ -414,8 +449,8 @@ contract("HEOCampaign", (accounts) => {
         await daoInstance.executeProposal(proposalId, {from: founder2});
 
         //deploy unbound campaign
-        campaign = await HEOCampaign.new(0, charityAccount, iTestCoin.address, "https://someurl1",
-            daoInstance.address, 0, 0, 0, 0, 0, platformTokenAddress, {from: charityAccount});
+        campaign = await HEOCampaign.new(0, charityAccount, iTestCoin.address,
+            daoInstance.address, 0, 0, 0, 0, 0, platformTokenAddress, compressed_meta, {from: charityAccount});
         currency = await campaign.currency.call();
         assert.equal(currency, iTestCoin.address, `Expecting currency to be ${iTestCoin.address}, but got ${currency}`);
         heoPrice = (await campaign.heoPrice.call()).toNumber();
@@ -431,8 +466,8 @@ contract("HEOCampaign", (accounts) => {
 
         //deploy native campaign
         campaign = await HEOCampaign.new(web3.utils.toWei("100"), charityAccount,
-            "0x0000000000000000000000000000000000000000", "https://someurl1",
-            daoInstance.address, 0, 0, 0, 0, 0, platformTokenAddress, {from: charityAccount});
+            "0x0000000000000000000000000000000000000000",
+            daoInstance.address, 0, 0, 0, 0, 0, platformTokenAddress, compressed_meta, {from: charityAccount});
         currency = await campaign.currency.call();
         assert.equal(currency, "0x0000000000000000000000000000000000000000", `Expecting currency to be 0-address, but got ${currency}`);
         heoPrice = (await campaign.heoPrice.call()).toNumber();
@@ -447,8 +482,8 @@ contract("HEOCampaign", (accounts) => {
         assert.isTrue(maxAmount.eq(new BN(web3.utils.toWei("100"))),`Expecting maxAmount = 10 ETH, but got ${maxAmount}`);
 
         //deploy large limit campaign
-        campaign = await HEOCampaign.new(web3.utils.toWei("20000"), charityAccount, iTestCoin.address,"https://someurl1",
-            daoInstance.address, 0, 0, 0, 0, 0, platformTokenAddress, {from: charityWorker});
+        campaign = await HEOCampaign.new(web3.utils.toWei("20000"), charityAccount, iTestCoin.address,
+            daoInstance.address, 0, 0, 0, 0, 0, platformTokenAddress, compressed_meta, {from: charityWorker});
         currency = await campaign.currency.call();
         assert.equal(currency, iTestCoin.address, `Expecting currency to be 0-address, but got ${currency}`);
         heoPrice = (await campaign.heoPrice.call()).toNumber();
@@ -464,8 +499,8 @@ contract("HEOCampaign", (accounts) => {
 
         //try to deploy unbound campaign with burning tokens
         try {
-            await HEOCampaign.new(0, charityAccount, iTestCoin.address, "https://someurl1",
-                daoInstance.address, 1, 0, 0, 0, 0, platformTokenAddress, {from: charityAccount});
+            await HEOCampaign.new(0, charityAccount, iTestCoin.address,
+                daoInstance.address, 1, 0, 0, 0, 0, platformTokenAddress, compressed_meta, {from: charityAccount});
             assert.fail(`Should fail to deploy unbound campaign with heoSpent > 0`);
         } catch (err) {
             assert.equal(err.reason,
@@ -476,8 +511,8 @@ contract("HEOCampaign", (accounts) => {
     it("Should close non-reward campaigns", async() => {
         //deploy campaign to collect unlimited native coin
         let campaign = await HEOCampaign.new(0, charityAccount, "0x0000000000000000000000000000000000000000",
-            "https://someurl1", daoInstance.address, 0, 0, 0, 0, 0, "0x0000000000000000000000000000000000000000",
-            {from: charityWorker});
+             daoInstance.address, 0, 0, 0, 0, 0, "0x0000000000000000000000000000000000000000",
+            compressed_meta, {from: charityWorker});
         let heoPrice = (await campaign.heoPrice.call()).toNumber();
         assert.equal(heoPrice, 0, `Expecting heoPrice = 0, but got ${heoPrice}`);
         let isActive = (await campaign.isActive.call());
@@ -502,8 +537,8 @@ contract("HEOCampaign", (accounts) => {
     it("Should allow changing maxAmount for non-reward campaigns", async() => {
         //deploy campaign to collect unlimited native coin
         let campaign = await HEOCampaign.new(0, charityAccount, "0x0000000000000000000000000000000000000000",
-            "https://someurl1", daoInstance.address, 0, 0, 0, 0, 0, "0x0000000000000000000000000000000000000000",
-            {from: charityWorker});
+             daoInstance.address, 0, 0, 0, 0, 0, "0x0000000000000000000000000000000000000000",
+            compressed_meta, {from: charityWorker});
         let heoPrice = (await campaign.heoPrice.call()).toNumber();
         assert.equal(heoPrice, 0, `Expecting heoPrice = 0, but got ${heoPrice}`);
         let isActive = (await campaign.isActive.call());
@@ -566,8 +601,9 @@ contract("HEOCampaign", (accounts) => {
         await daoInstance.executeProposal(proposalId, {from: founder1});
 
         //deploy campaign for 100 USDT
-        let campaign = await HEOCampaign.new(web3.utils.toWei("100"), charityAccount, iTestCoin.address, "https://someu",
-            daoInstance.address, web3.utils.toWei("5"), 100, 10, 500, 10000, platformTokenAddress, {from: charityAccount});
+        let campaign = await HEOCampaign.new(web3.utils.toWei("100"), charityAccount, iTestCoin.address,
+            daoInstance.address, web3.utils.toWei("5"), 100, 10, 500, 10000, platformTokenAddress, compressed_meta,
+            {from: charityAccount});
 
         var myCampaigns = await iRegistry.myCampaigns.call({from: charityAccount});
         assert.equal(myCampaigns.length, 0, `Should not have any registered campaigns. Found ${myCampaigns}`);

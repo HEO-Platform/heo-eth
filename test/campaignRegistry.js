@@ -8,6 +8,8 @@ const HEOPriceOracle = artifacts.require("HEOPriceOracle");
 const HEORewardFarm = artifacts.require("HEORewardFarm");
 const StableCoinForTests = artifacts.require("StableCoinForTests");
 const HEOBudget = artifacts.require("HEOBudget");
+const fs = require('fs');
+const { compress, decompress } = require('shrink-string');
 
 const ONE_COIN = web3.utils.toWei("1");
 var BN = web3.utils.BN;
@@ -24,6 +26,18 @@ const KEY_ACCEPTED_COINS = 4;
 const KEY_PRICE_ORACLE = 4;
 const KEY_TREASURER = 6;
 const KEY_REWARD_FARM = 2;
+
+var RAW_META = {
+    title:"Testing branch addToDb-40. Test 1",
+    description:"BLah Blah blah",
+    mainImageURL:"https://heodevmeta.s3.amazonaws.com/images/0331735-8dc-a3d8-1552-a5e646d2553.jpeg",
+    fn:"Greg",
+    ln:"Solovyev",
+    org:"HEO Dev",
+    cn:"",
+    vl:"https://youtu.be/uODBjB9Y7so"
+}
+var compressed_meta;
 contract("HEOCampaignRegistry", (accounts) => {
     before(async () => {
         founder1 = accounts[0];
@@ -135,11 +149,14 @@ contract("HEOCampaignRegistry", (accounts) => {
         await iDAO.vote(proposalId, 1, ONE_COIN, {from: founder2});
         await iDAO.vote(proposalId, 1, ONE_COIN, {from: founder3});
         await iDAO.executeProposal(proposalId, {from: founder2});
+
+        RAW_META.description = fs.readFileSync("README.md", "utf-8");
+        compressed_meta = await compress(JSON.stringify(RAW_META));
     });
     it("Should not register campaigns when factory address is not set", async() => {
         let myCampaignsBefore = await iRegistry.myCampaigns.call({from: charityAccount1});
         let ch1Campaign1 = await HEOCampaign.new(web3.utils.toWei("11"), charityAccount1, iTestCoin.address,
-            "https://someurl1", iDAO.address, 0, 0, 0, 0, 0, platformTokenAddress, {from: charityAccount1});
+            iDAO.address, 0, 0, 0, 0, 0, platformTokenAddress, compressed_meta, {from: charityAccount1});
         try {
             await iRegistry.registerCampaign(ch1Campaign1.address);
             assert.fail("Should not allow registering campaign from non-factory account");
@@ -177,23 +194,23 @@ contract("HEOCampaignRegistry", (accounts) => {
 
         //create campaigns
         let ch1Campaign1 = await HEOCampaign.new(web3.utils.toWei("11"), charityAccount1, iTestCoin.address,
-            "https://someurl1", iDAO.address, 0, 0, 0, 0, 0, platformTokenAddress, {from: charityAccount1});
+            iDAO.address, 0, 0, 0, 0, 0, platformTokenAddress, compressed_meta, {from: charityAccount1});
         let ch1Campaign2 = await HEOCampaign.new(web3.utils.toWei("12"), charityAccount1, iTestCoin.address,
-            "https://someurl1", iDAO.address, 0, 0, 0, 0, 0, platformTokenAddress, {from: charityAccount1});
+            iDAO.address, 0, 0, 0, 0, 0, platformTokenAddress, compressed_meta, {from: charityAccount1});
         let ch1Campaign3 = await HEOCampaign.new(web3.utils.toWei("13"), charityAccount1, iTestCoin.address,
-            "https://someurl1", iDAO.address, 0, 0, 0, 0, 0, platformTokenAddress, {from: charityAccount1});
+            iDAO.address, 0, 0, 0, 0, 0, platformTokenAddress, compressed_meta, {from: charityAccount1});
 
         let ch2Campaign1 = await HEOCampaign.new(web3.utils.toWei("21"), charityAccount2, iTestCoin.address,
-            "https://someurl1", iDAO.address, 0, 0, 0, 0, 0, platformTokenAddress, {from: charityAccount2});
+            iDAO.address, 0, 0, 0, 0, 0, platformTokenAddress, compressed_meta, {from: charityAccount2});
         let ch2Campaign2 = await HEOCampaign.new(web3.utils.toWei("22"), charityAccount2, iTestCoin.address,
-            "https://someurl1", iDAO.address, 0, 0, 0, 0, 0, platformTokenAddress, {from: charityAccount2});
+            iDAO.address, 0, 0, 0, 0, 0, platformTokenAddress, compressed_meta, {from: charityAccount2});
 
         let ch3Campaign1 = await HEOCampaign.new(web3.utils.toWei("31"), charityAccount3, iTestCoin.address,
-            "https://someurl1", iDAO.address, 0, 0, 0, 0, 0, platformTokenAddress, {from: charityAccount3});
+            iDAO.address, 0, 0, 0, 0, 0, platformTokenAddress, compressed_meta, {from: charityAccount3});
         let ch3Campaign2 = await HEOCampaign.new(web3.utils.toWei("32"), founder1, iTestCoin.address,
-            "https://someurl1", iDAO.address, 0, 0, 0, 0, 0, platformTokenAddress, {from: charityAccount3});
+            iDAO.address, 0, 0, 0, 0, 0, platformTokenAddress, compressed_meta, {from: charityAccount3});
         let ch3Campaign3 = await HEOCampaign.new(web3.utils.toWei("33"), treasurer, iTestCoin.address,
-            "https://someurl1", iDAO.address, 0, 0, 0, 0, 0, platformTokenAddress, {from: charityAccount3});
+            iDAO.address, 0, 0, 0, 0, 0, platformTokenAddress, compressed_meta, {from: charityAccount3});
 
         //counts should not have changed after creating campaigns
         myCampaigns1 = await iRegistry.myCampaigns.call({from: charityAccount1});
@@ -250,7 +267,7 @@ contract("HEOCampaignRegistry", (accounts) => {
     it("Should not register campaigns from non-factory address", async() => {
         let myCampaignsBefore = await iRegistry.myCampaigns.call({from: charityAccount1});
         let ch1Campaign1 = await HEOCampaign.new(web3.utils.toWei("11"), charityAccount1, iTestCoin.address,
-            "https://someurl1", iDAO.address, 0, 0, 0, 0, 0, platformTokenAddress, {from: charityAccount1});
+            iDAO.address, 0, 0, 0, 0, 0, platformTokenAddress, compressed_meta, {from: charityAccount1});
         try {
             await iRegistry.registerCampaign(ch1Campaign1.address, {from: founder2});
             assert.fail("Should not allow registering campaign from non-factory account");
