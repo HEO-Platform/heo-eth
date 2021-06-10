@@ -31,6 +31,17 @@ var RAW_META = {
     cn:"",
     vl:"https://youtu.be/uODBjB9Y7so"
 }
+
+var RAW_META2 = {
+    title:"Updated",
+    description:"Updated",
+    mainImageURL:"https://heodevmeta.s3.amazonaws.com/images/0331735-8dc-a3d8-1552-a5e646d2553.jpeg",
+    fn:"Update",
+    ln:"Change",
+    cn:"",
+    vl:"https://youtu.be/uODBjB9Y7so"
+}
+
 var compressed_meta;
 
 var BN = web3.utils.BN;
@@ -367,6 +378,18 @@ contract("HEOCampaign", (accounts) => {
         assert.equal(heoPriceDecimals, 10, `Expecting heoPriceDecimals = 10, but got ${heoPriceDecimals}`);
         let isActive = (await campaign.isActive.call());
         assert.isTrue(isActive, `Expecting campaign to be active, but got ${isActive}`);
+
+        let compressed_meta2 = await compress(JSON.stringify(RAW_META2));
+        await campaign.updateMetaData(compressed_meta2, {from: charityAccount});
+        //check that metadata was updated
+        let metaCheckCompressed = await campaign.metaData.call();
+        let metaCheck = await decompress(metaCheckCompressed);
+        assert.equal(compressed_meta2, metaCheckCompressed, `Wrong compressed metadata returned from blockchain`);
+        assert.equal(metaCheck, JSON.stringify(RAW_META2), `Wrong uncompressed metadata`);
+        metaCheck = JSON.parse(metaCheck);
+        for(var attr in RAW_META2) {
+            assert.equal(RAW_META2[attr], metaCheck[attr], `Expecting ${attr}=${RAW_META2[attr]} but found ${metaCheck[attr]}`);
+        }
     });
 
     it("Should enforce white list for creating campaigns", async() => {
@@ -530,9 +553,48 @@ contract("HEOCampaign", (accounts) => {
         }
         isActive = (await campaign.isActive.call());
         assert.isTrue(isActive, `Expecting campaign to be active after failed attempt to close, but got ${isActive}`);
+        try {
+            await campaign.updateMetaData(compressed_meta, {from: charityAccount});
+            assert.fail("Non-owner should not be able to update metadata");
+        } catch(err) {
+            assert.equal(err.reason,
+                "Ownable: caller is not the owner", `Wrong error message ${err}`);
+        }
+        try {
+            await campaign.update(web3.utils.toWei("100"), compressed_meta, {from: charityAccount});
+            assert.fail("Non-owner should not be able to update campaign");
+        } catch(err) {
+            assert.equal(err.reason,
+                "Ownable: caller is not the owner", `Wrong error message ${err}`);
+        }
         await campaign.close({from: charityWorker});
         isActive = (await campaign.isActive.call());
         assert.isFalse(isActive, `Expecting campaign to be closed after successful attempt to close, but got ${isActive}`);
+
+        //attempt to update
+        try {
+            await campaign.updateMaxAmount(web3.utils.toWei("100"), {from: charityWorker});
+            assert.fail("Should not be able to change max amount of an inactive campaign");
+        } catch (err) {
+            assert.equal(err.reason,
+                "HEOCampaign: this campaign is no longer active", `Wrong error message ${err}`);
+        }
+
+        try {
+            await campaign.updateMetaData(compressed_meta, {from: charityWorker});
+            assert.fail("Should not be able to update metadata of an inactive campaign");
+        } catch (err) {
+            assert.equal(err.reason,
+                "HEOCampaign: this campaign is no longer active", `Wrong error message ${err}`);
+        }
+
+        try {
+            await campaign.update(web3.utils.toWei("100"), compressed_meta, {from: charityWorker});
+            assert.fail("Should not be able to update an inactive campaign");
+        } catch (err) {
+            assert.equal(err.reason,
+                "HEOCampaign: this campaign is no longer active", `Wrong error message ${err}`);
+        }
     })
     it("Should allow changing maxAmount for non-reward campaigns", async() => {
         //deploy campaign to collect unlimited native coin
@@ -551,41 +613,58 @@ contract("HEOCampaign", (accounts) => {
         let maxAmount = (await campaign.maxAmount.call()).toNumber();
         assert.equal(maxAmount, 0, `Expecting maxAmount = 0, but got ${maxAmount}`);
         try {
-            await campaign.changeMaxAmount(web3.utils.toWei("100"), {from: charityAccount});
+            await campaign.updateMaxAmount(web3.utils.toWei("100"), {from: charityAccount});
             assert.fail("Non-owner should not be able to change maxAmount");
         } catch (err) {
             assert.equal(err.reason,
                 "Ownable: caller is not the owner", `Wrong error message ${err}`);
         }
-        await campaign.changeMaxAmount(web3.utils.toWei("100"), {from: charityWorker});
+        await campaign.update(web3.utils.toWei("100"), compressed_meta, {from: charityWorker});
         maxAmount = await campaign.maxAmount.call();
         assert.isTrue(maxAmount.eq(new BN(web3.utils.toWei("100"))),
             `Expecting maxAmount = 100 BNB, but got ${maxAmount}`);
 
-        await campaign.changeMaxAmount(web3.utils.toWei("90"), {from: charityWorker});
+        //update again with the same number and also change metadata
+        let compressed_meta2 = await compress(JSON.stringify(RAW_META2));
+        await campaign.update(web3.utils.toWei("100"), compressed_meta2, {from: charityWorker});
+        maxAmount = await campaign.maxAmount.call();
+        assert.isTrue(maxAmount.eq(new BN(web3.utils.toWei("100"))),
+            `Expecting maxAmount = 100 BNB, but got ${maxAmount}`);
+
+        //check that metadata was updated
+        let metaCheckCompressed = await campaign.metaData.call();
+        let metaCheck = await decompress(metaCheckCompressed);
+        assert.equal(compressed_meta2, metaCheckCompressed, `Wrong compressed metadata returned from blockchain`);
+        assert.equal(metaCheck, JSON.stringify(RAW_META2), `Wrong uncompressed metadata`);
+        metaCheck = JSON.parse(metaCheck);
+        for(var attr in RAW_META2) {
+            assert.equal(RAW_META2[attr], metaCheck[attr], `Expecting ${attr}=${RAW_META2[attr]} but found ${metaCheck[attr]}`);
+        }
+
+        await campaign.updateMaxAmount(web3.utils.toWei("90"), {from: charityWorker});
         maxAmount = await campaign.maxAmount.call();
         assert.isTrue(maxAmount.eq(new BN(web3.utils.toWei("90"))),
             `Expecting maxAmount = 100 BNB, but got ${maxAmount}`);
 
         await campaign.donateNative({from: donorAccount, value: web3.utils.toWei("10", "ether")});
         try {
-            await campaign.changeMaxAmount(web3.utils.toWei("9"), {from: charityWorker});
+            await campaign.updateMaxAmount(web3.utils.toWei("9"), {from: charityWorker});
             assert.fail("Non-owner should not be able to change maxAmount");
         } catch (err) {
             assert.equal(err.reason,
                 "HEOCampaign: newMaxAmount cannot be lower than amount raised", `Wrong error message ${err}`);
         }
-        await campaign.changeMaxAmount(web3.utils.toWei("11"), {from: charityWorker});
+        await campaign.updateMaxAmount(web3.utils.toWei("11"), {from: charityWorker});
         maxAmount = await campaign.maxAmount.call();
         assert.isTrue(maxAmount.eq(new BN(web3.utils.toWei("11"))),
             `Expecting maxAmount = 11 BNB, but got ${maxAmount}`);
-        await campaign.changeMaxAmount(web3.utils.toWei("10"), {from: charityWorker});
+        await campaign.updateMaxAmount(web3.utils.toWei("10"), {from: charityWorker});
         maxAmount = await campaign.maxAmount.call();
         assert.isTrue(maxAmount.eq(new BN(web3.utils.toWei("10"))),
             `Expecting maxAmount = 10 BNB, but got ${maxAmount}`);
     })
 
-    it("Should fail to maxAmount for reward campaigns when the campaign has no HEO", async() => {
+    it("Should fail to change maxAmount for reward campaigns when the campaign has no HEO", async() => {
         //send 25M HEO to the reward farm
         await daoInstance.proposeVote(2, 3, 0, [iRewardFarm.address, platformTokenAddress],
             [web3.utils.toWei("25000000")], 259201, 51, {from: founder1});
@@ -610,7 +689,7 @@ contract("HEOCampaign", (accounts) => {
         let heoLocked = await campaign.heoLocked.call();
         assert.isTrue(heoLocked.eq(new BN(web3.utils.toWei("5"))), `Expecting heoLocked = 5 HEO, but got ${heoLocked}`);
         let maxAmount = await campaign.maxAmount.call();
-        assert.isTrue(maxAmount.eq(new BN(web3.utils.toWei("100"))), `Expecting maxAmount = 100  USDT, but got ${maxAmount}`);
+        assert.isTrue(maxAmount.eq(new BN(web3.utils.toWei("100"))), `Expecting maxAmount = 100 USDT, but got ${maxAmount}`);
         let heoPrice = (await campaign.heoPrice.call()).toNumber();
         assert.equal(heoPrice, 100, `Expecting heoPrice = 0, but got ${heoPrice}`);
         let heoPriceDecimals = (await campaign.heoPriceDecimals.call()).toNumber();
@@ -620,11 +699,28 @@ contract("HEOCampaign", (accounts) => {
 
         //lower maxAmount by 20%
         try {
-            await campaign.changeMaxAmount(web3.utils.toWei("80"), {from: charityAccount});
+            await campaign.updateMaxAmount(web3.utils.toWei("80"), {from: charityAccount});
             assert.fail("Should fail to lower maxAmount when campaign does not have HEO");
         } catch (err) {
             assert.equal(err.reason,
                 "ERC20: transfer amount exceeds balance", `Wrong error message ${err}`);
+        }
+
+        //update metadata
+        let compressed_meta2 = await compress(JSON.stringify(RAW_META2));
+        await campaign.update(web3.utils.toWei("100"), compressed_meta2, {from: charityAccount});
+        maxAmount = await campaign.maxAmount.call();
+        assert.isTrue(maxAmount.eq(new BN(web3.utils.toWei("100"))),
+            `Expecting maxAmount = 100 USDT, but got ${maxAmount}`);
+
+        //check that metadata was updated
+        let metaCheckCompressed = await campaign.metaData.call();
+        let metaCheck = await decompress(metaCheckCompressed);
+        assert.equal(compressed_meta2, metaCheckCompressed, `Wrong compressed metadata returned from blockchain`);
+        assert.equal(metaCheck, JSON.stringify(RAW_META2), `Wrong uncompressed metadata`);
+        metaCheck = JSON.parse(metaCheck);
+        for(var attr in RAW_META2) {
+            assert.equal(RAW_META2[attr], metaCheck[attr], `Expecting ${attr}=${RAW_META2[attr]} but found ${metaCheck[attr]}`);
         }
     });
 });

@@ -670,7 +670,7 @@ contract("HEOCampaignFactory", (accounts) => {
         //try changing maxAmount by non-owner
         balanceBefore = await iToken.balanceOf.call(charityAccount);
         try {
-            await lastCampaign.changeMaxAmount(web3.utils.toWei("80"), {from: founder1});
+            await lastCampaign.updateMaxAmount(web3.utils.toWei("80"), {from: founder1});
             assert.fail("Non-owner should not be able to change maxAmount");
         } catch(err) {
             assert.equal(err.reason,
@@ -683,7 +683,7 @@ contract("HEOCampaignFactory", (accounts) => {
             `Expecting charity's HEO balance to remain unchanged, but found ${balanceAfter}`);
 
         //change maxAmount to 80 by owner
-        await lastCampaign.changeMaxAmount(web3.utils.toWei("80"), {from: charityAccount});
+        await lastCampaign.updateMaxAmount(web3.utils.toWei("80"), {from: charityAccount});
         isActive = (await lastCampaign.isActive.call());
         assert.isTrue(isActive, `Expecting campaign to be still be active, but got ${isActive}`);
         maxAmount = await lastCampaign.maxAmount.call();
@@ -700,7 +700,7 @@ contract("HEOCampaignFactory", (accounts) => {
         balanceBefore = await iToken.balanceOf.call(charityAccount);
         await lastCampaign.donateNative({from: donorAccount, value: web3.utils.toWei("20", "ether")});
         try {
-            await lastCampaign.changeMaxAmount(web3.utils.toWei("9"), {from: charityAccount});
+            await lastCampaign.updateMaxAmount(web3.utils.toWei("9"), {from: charityAccount});
             assert.fail("Should not be able to change maxAmount below donated amount");
         } catch (err) {
             assert.equal(err.reason,
@@ -710,7 +710,7 @@ contract("HEOCampaignFactory", (accounts) => {
         assert.isTrue(balanceAfter.eq(balanceBefore),
             `Expecting charity's HEO balance to remain unchanged, but found ${balanceAfter}`);
 
-        await lastCampaign.changeMaxAmount(web3.utils.toWei("20"), {from: charityAccount});
+        await lastCampaign.updateMaxAmount(web3.utils.toWei("20"), {from: charityAccount});
         isActive = (await lastCampaign.isActive.call());
         assert.isFalse(isActive, `Expecting campaign to be inactive, but got ${isActive}`);
         maxAmount = await lastCampaign.maxAmount.call();
