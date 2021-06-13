@@ -1,11 +1,11 @@
 const HEODAO = artifacts.require("HEODAO");
-const HEOPriceOracle = artifacts.require("HEOPriceOracle");
+const HEORewardFarm = artifacts.require("HEORewardFarm");
 
 module.exports = async function(deployer, network, accounts) {
     if(network != "test") {
         const iHEODao = await HEODAO.deployed();
-        await deployer.deploy(HEOPriceOracle);
-        const iRewardFarm = await HEOPriceOracle.deployed();
+        await deployer.deploy(HEORewardFarm, iHEODao.address);
+        const iRewardFarm = await HEORewardFarm.deployed();
         console.log(`HEORewardFarm address on ${network}: ${iRewardFarm.address}`);
     }
 }

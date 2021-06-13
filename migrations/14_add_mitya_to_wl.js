@@ -13,7 +13,7 @@ module.exports = async function(deployer, network, accounts) {
 
         await iHEODao.proposeVote(1, 0, KEY_FUNDRAISER_WHITE_LIST, ["0x5a943C0d419bD41ddf54C1b8c3d5DC7d58Fb3B73"], [1], 259201, 51,
             {from: accounts[0]});
-
+        console.log("Proposed vote to add Mitya to WL. Waiting for events");
         let events = await iHEODao.getPastEvents('ProposalCreated');
         var proposalId;
         if(events[0] && events[0].returnValues) {
@@ -26,10 +26,12 @@ module.exports = async function(deployer, network, accounts) {
                 }
             }
         }
-
+        console.log(`Found proposal: ${proposalId}`);
         await iHEODao.vote(proposalId, 1, ONE_COIN, {from: accounts[0]});
         await iHEODao.vote(proposalId, 1, ONE_COIN, {from: accounts[1]});
         await iHEODao.vote(proposalId, 1, ONE_COIN, {from: accounts[2]});
+        console.log(`Voted for proposal: ${proposalId}`);
         await iHEODao.executeProposal(proposalId, {from: accounts[1]});
+        console.log(`Executed proposal: ${proposalId}`);
     }
 }

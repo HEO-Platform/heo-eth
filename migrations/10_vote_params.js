@@ -12,7 +12,6 @@ const ONE_COIN = web3.utils.toWei("1");
 module.exports = async function(deployer, network, accounts) {
     if(network != "test") {
         console.log(`Network is ${network}`);
-
         console.log(`Accounts are ${accounts[0]}, ${accounts[1]}, ${accounts[2]}`);
         const KEY_PLATFORM_TOKEN_ADDRESS = 5;
         const KEY_CAMPAIGN_FACTORY = 0;
@@ -32,11 +31,11 @@ module.exports = async function(deployer, network, accounts) {
         const iPriceOracle = await HEOPriceOracle.deployed();
         var proposalId;
         var events;
+
         //register initial 3 voters
         const platformTokenAddress = await iHEOParams.contractAddress.call(KEY_PLATFORM_TOKEN_ADDRESS);
         console.log(`HEO coin address: ${platformTokenAddress}`);
         const iToken = await HEOToken.at(platformTokenAddress);
-        /*
         for (let i = 0; i < 3; i++) {
             console.log(`Registering account ${i} for voting`);
             await iToken.approve(iStaking.address, web3.utils.toWei("1"), {from: accounts[i]})
@@ -84,7 +83,7 @@ module.exports = async function(deployer, network, accounts) {
         await iHEODao.vote(proposalId, 1, ONE_COIN, {from: accounts[1]});
         await iHEODao.vote(proposalId, 1, ONE_COIN, {from: accounts[2]});
         await iHEODao.executeProposal(proposalId, {from: accounts[1]});
-*/
+
         //set reward farm by vote
         await iHEODao.proposeVote(3, 0, KEY_REWARD_FARM, [iRewardFarm.address], [1], 259201, 51,
             {from: accounts[0]});
