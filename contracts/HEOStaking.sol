@@ -100,7 +100,7 @@ contract HEOStaking is Ownable, IHEOStaking {
     @dev this internal method transfers the staked token back to voter, but does not update internal maps
     @return remaining amount staked by the voter
     */
-    function _reduceStake(uint256 _amount, address _token, address _voter) internal returns (uint256) {
+    function _reduceStake(uint256 _amount, address _token, address _voter) private returns (uint256) {
         IERC20 stakingToken = IERC20(_token);
         stakingToken.safeTransfer(_voter, _amount);
         uint256 remainingAmount = _voterStakes[_voter].sub(_amount);

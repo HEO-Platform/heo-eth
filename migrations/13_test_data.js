@@ -40,7 +40,7 @@ module.exports = async function(deployer, network, accounts) {
         const iHEODao = await HEODAO.deployed();
         await iHEODao.proposeVote(1, 0, KEY_ACCEPTED_COINS, ["0xed24fc36d5ee211ea25a80239fb8c4cfd80f12ee"], [1], 259201, 51,
             {from: accounts[0]});
-
+        console.log("Proposed vote to add test coin to accepted coins. Waiting for events");
         let events = await iHEODao.getPastEvents('ProposalCreated');
         var proposalId;
         if(events[0] && events[0].returnValues) {
@@ -53,10 +53,12 @@ module.exports = async function(deployer, network, accounts) {
                 }
             }
         }
-
+        console.log(`Found proposal: ${proposalId}`);
         await iHEODao.vote(proposalId, 1, ONE_COIN, {from: accounts[0]});
         await iHEODao.vote(proposalId, 1, ONE_COIN, {from: accounts[1]});
         await iHEODao.vote(proposalId, 1, ONE_COIN, {from: accounts[2]});
+        console.log(`Voted for proposal: ${proposalId}`);
         await iHEODao.executeProposal(proposalId, {from: accounts[1]});
+        console.log(`Executed proposal: ${proposalId}`);
     }
 }

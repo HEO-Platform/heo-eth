@@ -159,7 +159,7 @@ contract HEODAO is Ownable, ReentrancyGuard {
         _reduceStake(_amount, _token, _msgSender());
     }
 
-    function _reduceStake(uint256 _amount, address _token, address _voter) internal {
+    function _reduceStake(uint256 _amount, address _token, address _voter) private {
         uint256 remainingAmount = _heoStaking.voterStake(_voter).sub(_amount);
         //check that this voter is not withdrawing a stake locked in active vote
         for(uint256 i = 0; i < _activeProposals.length; i++) {
@@ -326,7 +326,7 @@ contract HEODAO is Ownable, ReentrancyGuard {
         _activeProposals.pop();
     }
 
-    function _executeParamProposal(HEOLib.Proposal storage proposal, uint256 winnerIndex) internal returns(bool) {
+    function _executeParamProposal(HEOLib.Proposal storage proposal, uint256 winnerIndex) private returns(bool) {
         if(proposal.opType == HEOLib.ProposedOperation.OP_DELETE_PARAM) {
             if(proposal.propType == HEOLib.ProposalType.INTVAL) {
                 _heoParams.deleteIntParameter(proposal.key);
@@ -358,7 +358,7 @@ contract HEODAO is Ownable, ReentrancyGuard {
         return false;
     }
 
-    function _executeBudgetProposal(HEOLib.Proposal storage proposal, uint256 winnerIndex) internal returns(bool) {
+    function _executeBudgetProposal(HEOLib.Proposal storage proposal, uint256 winnerIndex) private returns(bool) {
         IHEOBudget budget = IHEOBudget(payable(proposal.addrs[0]));
         if(proposal.opType == HEOLib.ProposedOperation.OP_SEND_TOKEN) {
             budget.assignTreasurer(_heoParams.contractAddress(HEOLib.TREASURER));

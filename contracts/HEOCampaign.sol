@@ -27,14 +27,14 @@ contract HEOCampaign is IHEOCampaign, Ownable, ReentrancyGuard {
     uint256 private _feeDecimals;
     bool private _isNative;
     bool private _isActive;
-    string private _metaDataUrl; //URL of off-chain metadata file that has tagline, description, images, etc
     address private _currency; //Address of the token accepted by this campaign
     HEODAO private _dao;
     address private _heoAddr;
+    string private _metaData;
 
-    constructor (uint256 maxAmount, address payable beneficiary, address currency, string memory metaUrl, HEODAO dao,
+    constructor (uint256 maxAmount, address payable beneficiary, address currency, HEODAO dao,
         uint256 heoLocked, uint256 heoPrice, uint256 heoPriceDecimals, uint256 fee, uint256 feeDecimals,
-        address heoAddr) public {
+        address heoAddr, string memory metaData) public {
         require(beneficiary != address(0), "HEOCampaign: beneficiary cannot be a zero address");
         if(currency == address(0)) {
             if(dao.heoParams().intParameterValue(HEOLib.ENABLE_FUNDRAISER_WHITELIST) > 0) {
@@ -71,8 +71,8 @@ contract HEOCampaign is IHEOCampaign, Ownable, ReentrancyGuard {
         _beneficiary = beneficiary;
         _dao = dao;
         _currency = currency;
-        _metaDataUrl = metaUrl;
         _isActive = true;
+        _metaData = metaData;
     }
 
     modifier _canDonate() {
@@ -138,10 +138,6 @@ contract HEOCampaign is IHEOCampaign, Ownable, ReentrancyGuard {
         donateNative();
     }
 
-    function updateMetaDataUrl(string memory metaDataUrl) external onlyOwner {
-        require(_isActive, "HEOCampaign: this campaign is no longer active");
-        _metaDataUrl = metaDataUrl;
-    }
     //getters
 
     /**
@@ -200,11 +196,32 @@ contract HEOCampaign is IHEOCampaign, Ownable, ReentrancyGuard {
         return _heoLocked;
     }
 
-    function metaDataUrl() external view returns (string memory) {
-        return _metaDataUrl;
+    function metaData() external view override returns (string memory) {
+        return _metaData;
     }
 
-    function changeMaxAmount(uint256 newMaxAmount) external override onlyOwner() {
+    //updates
+    function updateMetaData(string memory newMetaData) external override onlyOwner {
+        require(_isActive, "HEOCampaign: this campaign is no longer active");
+        _metaData = newMetaData;
+    }
+
+    function update(uint256 newMaxAmount, string memory newMetaData) external override onlyOwner {
+        require(_isActive, "HEOCampaign: this campaign is no longer active");
+        if(newMaxAmount != _maxAmount) {
+            _updateMaxAmount(newMaxAmount);
+        }
+        _metaData = newMetaData;
+    }
+
+    function updateMaxAmount(uint256 newMaxAmount) external override onlyOwner() {
+        require(_isActive, "HEOCampaign: this campaign is no longer active");
+        if(newMaxAmount != _maxAmount) {
+            _updateMaxAmount(newMaxAmount);
+        }
+    }
+
+    function _updateMaxAmount(uint256 newMaxAmount) private {
         require(newMaxAmount >= _raisedFunds, "HEOCampaign: newMaxAmount cannot be lower than amount raised");
         if(_heoLocked > 0) {
             uint256 heoRequired = _dao.heoParams().calculateFee(newMaxAmount).div(_heoPrice).mul(_heoPriceDecimals);
@@ -222,6 +239,7 @@ contract HEOCampaign is IHEOCampaign, Ownable, ReentrancyGuard {
         }
         _maxAmount = newMaxAmount;
     }
+
     function close() external override onlyOwner() {
         require(_isActive, "HEOCampaign: this campaign is no longer active");
         //refund unspent HEO
