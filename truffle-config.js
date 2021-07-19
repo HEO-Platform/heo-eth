@@ -1,7 +1,7 @@
 const HDWalletProvider = require('truffle-hdwallet-provider');
 const fs = require('fs');
 const mnemonic = fs.readFileSync(".secret_testnet").toString().trim();
-
+//const mnemonic = fs.readFileSync(".secret_mainnet").toString().trim();
 module.exports = {
   // Uncommenting the defaults below 
   // provides for an easier quick-start with Ganache.
@@ -63,11 +63,18 @@ module.exports = {
             skipDryRun: true
         },
         bsc: {
-            provider: () => new HDWalletProvider(mnemonic, `https://bsc-dataseed1.binance.org`),
+            provider: () => new HDWalletProvider(mnemonic, `https://bsc-dataseed1.binance.org`, 0, 3),
             network_id: 56,
             confirmations: 5,
             timeoutBlocks: 200,
             skipDryRun: true
         },
+        rinkeby:{
+            provider: () => new HDWalletProvider(mnemonic, 'https://rinkeby.infura.io/v3/56dea47710364cc1aa0163e29adfdd24', 0, 3),
+            network_id: 4,
+            confirmations: 5,
+            timeoutBlocks: 200,
+            skipDryRun: true
+        }
     }
 };
