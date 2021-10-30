@@ -20,7 +20,8 @@ module.exports = async function(deployer, network, accounts) {
         const KEY_REWARD_FARM = 2;
 
         //deploy the DAO
-        const iHEODao = await HEODAO.deployed();
+        //const iHEODao = await HEODAO.deployed();
+        const iHEODao = await HEODAO.at("0xEF0a2F0123Fd7B489835eb7e54efa145f4767FE1");
 
         //instantiate main contracts
         const iRewardFarm = await HEORewardFarm.deployed();
@@ -37,15 +38,23 @@ module.exports = async function(deployer, network, accounts) {
         console.log(`HEO coin address: ${platformTokenAddress}`);
         const iToken = await HEOToken.at(platformTokenAddress);
         try {
-            for (let i = 0; i < 3; i++) {
+            for (let i = 0; i < 1; i++) {
                 console.log(`Registering account ${i} for voting`);
-                let txReceipt = await iToken.approve(iStaking.address, web3.utils.toWei("1"), {from: accounts[i]})
-                //console.log("Receipt:");
-                //console.log(txReceipt);
-                console.log(`Approve transaction cost: ${txReceipt.receipt.gasUsed}`);
+                let txReceipt = await iToken.approve(iStaking.address, ONE_COIN, {from: accounts[i]})
+                console.log(`Approve cost: ${txReceipt.receipt.gasUsed}`);
+                console.log(`Approve hash: ${txReceipt.receipt.transactionHash}`);
+                console.log(`Approve block hash: ${txReceipt.receipt.blockHash}`);
+                console.log(`Approve NEAR transaction hash: ${txReceipt.receipt.nearTransactionHash}`);
+                console.log(`Approve NEAR receipt hash: ${txReceipt.receipt.nearReceiptHash}`);
+                console.log(`Approve transaction block number: ${txReceipt.receipt.blockNumber}`);
                 totalGasUsed += txReceipt.receipt.gasUsed;
-                txReceipt = await iHEODao.registerToVote(web3.utils.toWei("1"), platformTokenAddress, {from: accounts[i]});
+                txReceipt = await iHEODao.registerToVote(ONE_COIN, platformTokenAddress, {from: accounts[i]});
                 console.log(`Register transaction cost: ${txReceipt.receipt.gasUsed}`);
+                console.log(`Register hash: ${txReceipt.receipt.transactionHash}`);
+                console.log(`Register block hash: ${txReceipt.receipt.blockHash}`);
+                console.log(`Register NEAR transaction hash: ${txReceipt.receipt.nearTransactionHash}`);
+                console.log(`Register NEAR receipt hash: ${txReceipt.receipt.nearReceiptHash}`);
+                console.log(`Register transaction block number: ${txReceipt.receipt.blockNumber}`);
                 totalGasUsed += txReceipt.receipt.gasUsed;
             }
         } catch (err) {
@@ -54,23 +63,29 @@ module.exports = async function(deployer, network, accounts) {
         }
 
         //set campaign factory address by vote
+        events = await iHEODao.getPastEvents('ProposalCreated');
+        var numEvents = events.length;
         let txReceipt = await iHEODao.proposeVote(3, 0, KEY_CAMPAIGN_FACTORY, [iCampaignFactory.address], [1], 259201, 51,
             {from: accounts[0]});
         console.log("Proposed vote to set campaign factory. Waiting for events");
         console.log(`Proposed vote cost: ${txReceipt.receipt.gasUsed}`);
         totalGasUsed += txReceipt.receipt.gasUsed;
         events = await iHEODao.getPastEvents('ProposalCreated');
-        if(events[0] && events[0].returnValues) {
-            proposalId = events[0].returnValues.proposalId;
+        if(events.length > numEvents) {
+            if(events[numEvents] && events[numEvents].returnValues) {
+                proposalId = events[numEvents].returnValues.proposalId;
+            }
         } else {
-            while(!events[0]) {
+            while(events.length <= numEvents) {
                 events = await iHEODao.getPastEvents('ProposalCreated');
-                if(events[0] && events[0].returnValues) {
-                    proposalId = events[0].returnValues.proposalId;
+                if(events.length > numEvents) {
+                    if(events[numEvents] && events[numEvents].returnValues) {
+                        proposalId = events[numEvents].returnValues.proposalId;
+                    }
                 }
             }
         }
-
+        numEvents = events.length;
         console.log(`Found proposal: ${proposalId}`);
         txReceipt = await iHEODao.vote(proposalId, 1, ONE_COIN, {from: accounts[0]});
         console.log(`Vote cost: ${txReceipt.receipt.gasUsed}`);
@@ -86,7 +101,6 @@ module.exports = async function(deployer, network, accounts) {
         console.log(`Executed proposal: ${proposalId}`);
         console.log(`Execute cost: ${txReceipt.receipt.gasUsed}`);
         totalGasUsed += txReceipt.receipt.gasUsed;
-
         //set price oracle by vote
         txReceipt = await iHEODao.proposeVote(3, 0, KEY_PRICE_ORACLE, [iPriceOracle.address], [1], 259201, 51,
             {from: accounts[0]});
@@ -94,17 +108,21 @@ module.exports = async function(deployer, network, accounts) {
         console.log(`Propose cost: ${txReceipt.receipt.gasUsed}`);
         totalGasUsed += txReceipt.receipt.gasUsed;
         events = await iHEODao.getPastEvents('ProposalCreated');
-        if(events[0] && events[0].returnValues) {
-            proposalId = events[0].returnValues.proposalId;
+        if(events.length > numEvents) {
+            if(events[numEvents] && events[numEvents].returnValues) {
+                proposalId = events[numEvents].returnValues.proposalId;
+            }
         } else {
-            while(!events[0]) {
+            while(events.length <= numEvents) {
                 events = await iHEODao.getPastEvents('ProposalCreated');
-                if(events[0] && events[0].returnValues) {
-                    proposalId = events[0].returnValues.proposalId;
+                if(events.length > numEvents) {
+                    if(events[numEvents] && events[numEvents].returnValues) {
+                        proposalId = events[numEvents].returnValues.proposalId;
+                    }
                 }
             }
         }
-
+        numEvents = events.length;
         console.log(`Found proposal: ${proposalId}`);
         txReceipt = await iHEODao.vote(proposalId, 1, ONE_COIN, {from: accounts[0]});
         console.log(`Vote cost: ${txReceipt.receipt.gasUsed}`);
@@ -128,16 +146,22 @@ module.exports = async function(deployer, network, accounts) {
         console.log(`Propose cost: ${txReceipt.receipt.gasUsed}`);
         totalGasUsed += txReceipt.receipt.gasUsed;
         events = await iHEODao.getPastEvents('ProposalCreated');
-        if(events[0] && events[0].returnValues) {
-            proposalId = events[0].returnValues.proposalId;
+
+        if(events.length > numEvents) {
+            if(events[numEvents] && events[numEvents].returnValues) {
+                proposalId = events[numEvents].returnValues.proposalId;
+            }
         } else {
-            while(!events[0]) {
+            while(events.length <= numEvents) {
                 events = await iHEODao.getPastEvents('ProposalCreated');
-                if(events[0] && events[0].returnValues) {
-                    proposalId = events[0].returnValues.proposalId;
+                if(events.length > numEvents) {
+                    if(events[numEvents] && events[numEvents].returnValues) {
+                        proposalId = events[numEvents].returnValues.proposalId;
+                    }
                 }
             }
         }
+        numEvents = events.length;
 
         console.log(`Found proposal: ${proposalId}`);
         txReceipt = await iHEODao.vote(proposalId, 1, ONE_COIN, {from: accounts[0]});
@@ -162,16 +186,22 @@ module.exports = async function(deployer, network, accounts) {
         console.log(`Propose cost: ${txReceipt.receipt.gasUsed}`);
         totalGasUsed += txReceipt.receipt.gasUsed;
         events = await iHEODao.getPastEvents('ProposalCreated');
-        if(events[0] && events[0].returnValues) {
-            proposalId = events[0].returnValues.proposalId;
+
+        if(events.length > numEvents) {
+            if(events[numEvents] && events[numEvents].returnValues) {
+                proposalId = events[numEvents].returnValues.proposalId;
+            }
         } else {
-            while(!events[0]) {
+            while(events.length <= numEvents) {
                 events = await iHEODao.getPastEvents('ProposalCreated');
-                if(events[0] && events[0].returnValues) {
-                    proposalId = events[0].returnValues.proposalId;
+                if(events.length > numEvents) {
+                    if(events[numEvents] && events[numEvents].returnValues) {
+                        proposalId = events[numEvents].returnValues.proposalId;
+                    }
                 }
             }
         }
+        numEvents = events.length;
 
         console.log(`Found proposal: ${proposalId}`);
         txReceipt = await iHEODao.vote(proposalId, 1, ONE_COIN, {from: accounts[0]});
@@ -188,7 +218,6 @@ module.exports = async function(deployer, network, accounts) {
         console.log(`Executed proposal: ${proposalId}`);
         console.log(`Execute cost: ${txReceipt.receipt.gasUsed}`);
         totalGasUsed += txReceipt.receipt.gasUsed;
-        console.log(txReceipt);
         console.log(`Total gas cost: ${totalGasUsed}`);
     }
 }

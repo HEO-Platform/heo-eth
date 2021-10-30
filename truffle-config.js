@@ -1,7 +1,30 @@
 const HDWalletProvider = require('truffle-hdwallet-provider');
+const NonceTrackerSubprovider = require('web3-provider-engine/subproviders/nonce-tracker')
+
 const fs = require('fs');
-const mnemonic = fs.readFileSync(".secret_testnet").toString().trim();
+const MNEMONIC = fs.readFileSync(".secret_testnet").toString().trim();
+const ROOT_ACOUNT = "0x02C364e8048C60c980d4C1abb9918f66D716d603";
+const startIndex = 0
+const numberOfAccounts = 3
 //const mnemonic = fs.readFileSync(".secret_mainnet").toString().trim();
+//const ROOT_ACOUNT = "0x403e550f5e4702be7e0e80e57fd5f35395322658";
+let hdWalletProvider;
+const setupWallet = (
+    url
+) => {
+    if (!hdWalletProvider) {
+        hdWalletProvider = new HDWalletProvider(
+            MNEMONIC,
+            url,
+            startIndex,
+            numberOfAccounts,
+            true,
+        )
+        hdWalletProvider.engine.addProvider(new NonceTrackerSubprovider())
+    }
+    return hdWalletProvider
+};
+
 module.exports = {
   // Uncommenting the defaults below 
   // provides for an easier quick-start with Ganache.
@@ -26,7 +49,7 @@ module.exports = {
     ],
     compilers: {
         solc: {
-            version: "0.6.12",
+            version: "0.8.0",
                 // Can also be set to "native" to use a native solc
             docker: false, // Use a version obtained through docker
             parser: "solcjs", // Leverages solc-js purely for speedy parsing
@@ -75,6 +98,12 @@ module.exports = {
             confirmations: 5,
             timeoutBlocks: 200,
             skipDryRun: true
-        }
+        },
+        auroratest: {
+            provider: () => setupWallet('https://testnet.aurora.dev'),
+            network_id: 0x4e454153,
+            gas: 10000000,
+            from: ROOT_ACOUNT // CHANGE THIS ADDRESS
+        },
     }
 };
