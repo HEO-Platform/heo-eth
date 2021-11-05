@@ -6,8 +6,16 @@ module.exports = async function(deployer, network, accounts) {
         const iHEODao = await HEODAO.deployed();
         await deployer.deploy(HEOParameters);
         const iHEOParams = await HEOParameters.deployed();
-        await iHEOParams.transferOwnership(iHEODao.address);
-        await iHEODao.setParams(iHEOParams.address);
         console.log(`HEOParameters address on ${network}: ${iHEOParams.address}`);
+
+        let txReceipt = await iHEOParams.transferOwnership(iHEODao.address);
+        console.log(`transferOwnership transaction cost: ${txReceipt.receipt.gasUsed}`);
+        console.log(`transferOwnership transaction hash: ${txReceipt.receipt.transactionHash}`);
+        console.log(`transferOwnership transaction block hash: ${txReceipt.receipt.blockHash}`);
+
+        txReceipt = await iHEODao.setParams(iHEOParams.address);
+        console.log(`setParams transaction cost: ${txReceipt.receipt.gasUsed}`);
+        console.log(`setParams transaction hash: ${txReceipt.receipt.transactionHash}`);
+        console.log(`setParams transaction block hash: ${txReceipt.receipt.blockHash}`);
     }
 }
