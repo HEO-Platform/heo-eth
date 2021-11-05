@@ -10,58 +10,56 @@ const HEOBudget = artifacts.require("HEOBudget");
 
 const fs = require('fs');
 module.exports = async function(deployer, network, accounts) {
-    if(network.indexOf("test") >=0) {
-        console.log(`Network is ${network}`);
-        try {
-            fs.mkdirSync(`./build/web/${network}`, {recursive:true});
-        } catch (err) {
+    console.log(`Network is ${network}`);
+    try {
+        fs.mkdirSync(`./build/web/${network}`, {recursive:true});
+    } catch (err) {
 
-        }
-
-        //HEODao
-        let instance = await HEODAO.deployed();
-        _writeFile("HEODAO", false, instance, network);
-
-        //HEOCampaignFactory
-        instance = await HEOCampaignFactory.deployed();
-        _writeFile("HEOCampaignFactory", false, instance, network);
-
-        //HEOParameters
-        instance = await HEOParameters.deployed();
-        _writeFile("HEOParameters", false, instance, network);
-
-        //HEOCampaignRegistry
-        instance = await HEOCampaignRegistry.deployed();
-        _writeFile("HEOCampaignRegistry", false, instance, network);
-
-        //HEOPriceOracle
-        instance = await HEOPriceOracle.deployed();
-        _writeFile("HEOPriceOracle", false, instance, network);
-
-        //HEORewardFarm
-        instance = await HEORewardFarm.deployed();
-        _writeFile("HEORewardFarm", false, instance, network);
-
-        //HEORewardFarm
-        instance = await HEOStaking.deployed();
-        _writeFile("HEOStaking", false, instance, network);
-
-        //HEOBudget
-        _writeFile("HEOCampaign", true,null, network);
-
-        //HEOBudget
-        _writeFile("HEOBudget", true, null, network);
-
-        //ERC20
-        _writeFile("ERC20", true, null, network);
-
-        //HEOToken
-        const KEY_PLATFORM_TOKEN_ADDRESS = 5;
-        const iHEOParams = await HEOParameters.deployed();
-        const platformTokenAddress = await iHEOParams.contractAddress.call(KEY_PLATFORM_TOKEN_ADDRESS);
-        instance = await HEOToken.at(platformTokenAddress);
-        _writeFile("HEOToken", false, instance, network);
     }
+
+    //HEODao
+    let instance = await HEODAO.deployed();
+    _writeFile("HEODAO", false, instance, network);
+
+    //HEOCampaignFactory
+    instance = await HEOCampaignFactory.deployed();
+    _writeFile("HEOCampaignFactory", false, instance, network);
+
+    //HEOParameters
+    instance = await HEOParameters.deployed();
+    _writeFile("HEOParameters", false, instance, network);
+
+    //HEOCampaignRegistry
+    instance = await HEOCampaignRegistry.deployed();
+    _writeFile("HEOCampaignRegistry", false, instance, network);
+
+    //HEOPriceOracle
+    instance = await HEOPriceOracle.deployed();
+    _writeFile("HEOPriceOracle", false, instance, network);
+
+    //HEORewardFarm
+    instance = await HEORewardFarm.deployed();
+    _writeFile("HEORewardFarm", false, instance, network);
+
+    //HEORewardFarm
+    instance = await HEOStaking.deployed();
+    _writeFile("HEOStaking", false, instance, network);
+
+    //HEOBudget
+    _writeFile("HEOCampaign", true,null, network);
+
+    //HEOBudget
+    _writeFile("HEOBudget", true, null, network);
+
+    //ERC20
+    _writeFile("ERC20", true, null, network);
+
+    //HEOToken
+    const KEY_PLATFORM_TOKEN_ADDRESS = 5;
+    const iHEOParams = await HEOParameters.deployed();
+    const platformTokenAddress = await iHEOParams.contractAddress.call(KEY_PLATFORM_TOKEN_ADDRESS);
+    instance = await HEOToken.at(platformTokenAddress);
+    _writeFile("HEOToken", false, instance, network);
 
 }
 
