@@ -10,10 +10,10 @@ const HEOBudget = artifacts.require("HEOBudget");
 
 const fs = require('fs');
 module.exports = async function(deployer, network, accounts) {
-    if(network != "test") {
+    if(network.indexOf("test") >=0) {
         console.log(`Network is ${network}`);
         try {
-            fs.mkdirSync(`./build/web/${network}`);
+            fs.mkdirSync(`./build/web/${network}`, {recursive:true});
         } catch (err) {
 
         }
