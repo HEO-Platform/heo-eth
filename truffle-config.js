@@ -1,12 +1,16 @@
 const HDWalletProvider = require('truffle-hdwallet-provider');
 const NonceTrackerSubprovider = require('web3-provider-engine/subproviders/nonce-tracker')
+const Web3 = require('web3');
+const web3 = new Web3();
 
 const fs = require('fs');
 const MNEMONIC = fs.readFileSync(".secret_testnet").toString().trim();
-const ROOT_ACOUNT = "0x02C364e8048C60c980d4C1abb9918f66D716d603";
-const startIndex = 0
-const numberOfAccounts = 3
-//const mnemonic = fs.readFileSync(".secret_mainnet").toString().trim();
+//const MNEMONIC = fs.readFileSync(".secret_mainnet").toString().trim();
+//const ROOT_ACOUNT = "0x02C364e8048C60c980d4C1abb9918f66D716d603";
+const ROOT_ACOUNT = "0x403E550f5E4702BE7e0e80E57fd5F35395322658";
+const startIndex = 0;
+const numberOfAccounts = 3;
+
 //const ROOT_ACOUNT = "0x403e550f5e4702be7e0e80e57fd5f35395322658";
 let hdWalletProvider;
 const setupWallet = (
@@ -79,21 +83,21 @@ module.exports = {
             skipDryRun: true
         },
         bscdev: {
-            provider: () => new HDWalletProvider(mnemonic, `https://data-seed-prebsc-1-s1.binance.org:8545`, 0, 3),
+            provider: () => new HDWalletProvider(MNEMONIC, `https://data-seed-prebsc-1-s1.binance.org:8545`, 0, 3),
             network_id: 97,
             confirmations: 5,
             timeoutBlocks: 200,
             skipDryRun: true
         },
         bsc: {
-            provider: () => new HDWalletProvider(mnemonic, `https://bsc-dataseed1.binance.org`, 0, 3),
+            provider: () => new HDWalletProvider(MNEMONIC, `https://bsc-dataseed1.binance.org`, 0, 3),
             network_id: 56,
             confirmations: 5,
             timeoutBlocks: 200,
             skipDryRun: true
         },
         rinkeby:{
-            provider: () => new HDWalletProvider(mnemonic, 'https://rinkeby.infura.io/v3/56dea47710364cc1aa0163e29adfdd24', 0, 3),
+            provider: () => new HDWalletProvider(MNEMONIC, 'https://rinkeby.infura.io/v3/56dea47710364cc1aa0163e29adfdd24', 0, 3),
             network_id: 4,
             confirmations: 5,
             timeoutBlocks: 200,
@@ -104,6 +108,13 @@ module.exports = {
             network_id: 0x4e454153,
             gas: 10000000,
             from: ROOT_ACOUNT // CHANGE THIS ADDRESS
+        },
+        ethereum: {
+            provider: () => new HDWalletProvider(MNEMONIC, `https://mainnet.infura.io/v3/56dea47710364cc1aa0163e29adfdd24`, 0, 3),
+            network_id: 1,
+            confirmations: 10,
+            skipDryRun: false,
+            gas: 5400000
         },
     }
 };
