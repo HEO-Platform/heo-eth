@@ -19,8 +19,10 @@ module.exports = async function(deployer, network, accounts) {
         console.log(`initVoters transaction cost: ${txReceipt.receipt.gasUsed}`);
         console.log(`initVoters transaction hash: ${txReceipt.receipt.transactionHash}`);
         console.log(`initVoters transaction block hash: ${txReceipt.receipt.blockHash}`);
-        console.log(`initVoters NEAR transaction hash: ${txReceipt.receipt.nearTransactionHash}`);
-        console.log(`initVoters NEAR receipt hash: ${txReceipt.receipt.nearReceiptHash}`);
+        if(network == "auroratest" || network=="aurora") {
+            console.log(`initVoters NEAR transaction hash: ${txReceipt.receipt.nearTransactionHash}`);
+            console.log(`initVoters NEAR receipt hash: ${txReceipt.receipt.nearReceiptHash}`);
+        }
         console.log(`initVoters transaction block number: ${txReceipt.receipt.blockNumber}`);
 
         //deploy HEO token via the DAO
@@ -29,8 +31,10 @@ module.exports = async function(deployer, network, accounts) {
         console.log(`deployPlatformToken transaction cost: ${txReceipt.receipt.gasUsed}`);
         console.log(`deployPlatformToken transaction hash: ${txReceipt.receipt.transactionHash}`);
         console.log(`deployPlatformToken transaction block hash: ${txReceipt.receipt.blockHash}`);
-        console.log(`deployPlatformToken NEAR transaction hash: ${txReceipt.receipt.nearTransactionHash}`);
-        console.log(`deployPlatformToken NEAR receipt hash: ${txReceipt.receipt.nearReceiptHash}`);
+        if(network == "auroratest" || network=="aurora") {
+            console.log(`deployPlatformToken NEAR transaction hash: ${txReceipt.receipt.nearTransactionHash}`);
+            console.log(`deployPlatformToken NEAR receipt hash: ${txReceipt.receipt.nearReceiptHash}`);
+        }
         console.log(`deployPlatformToken transaction block number: ${txReceipt.receipt.blockNumber}`);
 
         //register initial 3 voters
