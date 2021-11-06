@@ -36,37 +36,39 @@ module.exports = async function(deployer, network, accounts) {
         const platformTokenAddress = await iHEOParams.contractAddress.call(KEY_PLATFORM_TOKEN_ADDRESS);
         console.log(`HEO coin address: ${platformTokenAddress}`);
         const iToken = await HEOToken.at(platformTokenAddress);
-        try {
+
             for (let i = 0; i < 3; i++) {
-                console.log(`Registering account ${i} for voting`);
-                let txReceipt = await iToken.approve(iStaking.address, ONE_COIN, {from: accounts[i]})
-                console.log(`Approve cost: ${txReceipt.receipt.gasUsed}`);
-                console.log(`Approve hash: ${txReceipt.receipt.transactionHash}`);
-                console.log(`Approve block hash: ${txReceipt.receipt.blockHash}`);
-                if(network == "auroratest" || network=="aurora") {
-                    console.log(`Approve NEAR transaction hash: ${txReceipt.receipt.nearTransactionHash}`);
-                    console.log(`Approve NEAR receipt hash: ${txReceipt.receipt.nearReceiptHash}`);
+                try {
+                    console.log(`Registering account ${i} for voting`);
+                    let txReceipt = await iToken.approve(iStaking.address, ONE_COIN, {from: accounts[i]})
+                    console.log(`Approve cost: ${txReceipt.receipt.gasUsed}`);
+                    console.log(`Approve hash: ${txReceipt.receipt.transactionHash}`);
+                    console.log(`Approve block hash: ${txReceipt.receipt.blockHash}`);
+                    if(network == "auroratest" || network=="aurora") {
+                        console.log(`Approve NEAR transaction hash: ${txReceipt.receipt.nearTransactionHash}`);
+                        console.log(`Approve NEAR receipt hash: ${txReceipt.receipt.nearReceiptHash}`);
+                    }
+                    console.log(`Approve transaction block number: ${txReceipt.receipt.blockNumber}`);
+                    totalGasUsed += txReceipt.receipt.gasUsed;
+                    txReceipt = await iHEODao.registerToVote(ONE_COIN, platformTokenAddress, {from: accounts[i]});
+                    console.log(`Register transaction cost: ${txReceipt.receipt.gasUsed}`);
+                    console.log(`Register hash: ${txReceipt.receipt.transactionHash}`);
+                    console.log(`Register block hash: ${txReceipt.receipt.blockHash}`);
+                    if(network == "auroratest" || network=="aurora") {
+                        console.log(`Register NEAR transaction hash: ${txReceipt.receipt.nearTransactionHash}`);
+                        console.log(`Register NEAR receipt hash: ${txReceipt.receipt.nearReceiptHash}`);
+                    }
+                    console.log(`Register transaction block number: ${txReceipt.receipt.blockNumber}`);
+                    totalGasUsed += txReceipt.receipt.gasUsed;
+                } catch (err) {
+                    console.log("likely rerunning migration. Ignoring error.")
+                    console.log(err);
                 }
-                console.log(`Approve transaction block number: ${txReceipt.receipt.blockNumber}`);
-                totalGasUsed += txReceipt.receipt.gasUsed;
-                txReceipt = await iHEODao.registerToVote(ONE_COIN, platformTokenAddress, {from: accounts[i]});
-                console.log(`Register transaction cost: ${txReceipt.receipt.gasUsed}`);
-                console.log(`Register hash: ${txReceipt.receipt.transactionHash}`);
-                console.log(`Register block hash: ${txReceipt.receipt.blockHash}`);
-                if(network == "auroratest" || network=="aurora") {
-                    console.log(`Register NEAR transaction hash: ${txReceipt.receipt.nearTransactionHash}`);
-                    console.log(`Register NEAR receipt hash: ${txReceipt.receipt.nearReceiptHash}`);
-                }
-                console.log(`Register transaction block number: ${txReceipt.receipt.blockNumber}`);
-                totalGasUsed += txReceipt.receipt.gasUsed;
             }
-        } catch (err) {
-            console.log("likely rerunning migration. Ignoring error.")
-            console.log(err);
-        }
+
 
         //set campaign factory address by vote
-        let txReceipt = await iHEODao.proposeVote(3, 0, KEY_CAMPAIGN_FACTORY, [iCampaignFactory.address], [1], 259201, 51,
+       /* let txReceipt = await iHEODao.proposeVote(3, 0, KEY_CAMPAIGN_FACTORY, [iCampaignFactory.address], [1], 259201, 51,
             {from: accounts[0]});
         console.log("Proposed vote to set campaign factory");
         console.log(`Proposed vote cost: ${txReceipt.receipt.gasUsed}`);
@@ -79,7 +81,8 @@ module.exports = async function(deployer, network, accounts) {
             console.log(`Found proposal ${proposalId}`);
         } else {
             console.log("No events");
-        }
+        }*/
+        proposalId = "0xbd51681d0de922ad5042e466d908ab693be4e236550d3fc40a1c2f7aecd817f5";
         txReceipt = await iHEODao.vote(proposalId, 1, ONE_COIN, {from: accounts[0]});
         console.log(`Vote cost: ${txReceipt.receipt.gasUsed}`);
         totalGasUsed += txReceipt.receipt.gasUsed;

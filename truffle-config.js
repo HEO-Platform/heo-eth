@@ -116,5 +116,12 @@ module.exports = {
             skipDryRun: false,
             gas: 5400000
         },
+        goerli:{
+            provider: () => new HDWalletProvider(MNEMONIC, 'https://goerli.infura.io/v3/56dea47710364cc1aa0163e29adfdd24', 0, 3),
+            network_id: 5,
+            confirmations: 5,
+            timeoutBlocks: 200,
+            skipDryRun: true
+        }
     }
 };

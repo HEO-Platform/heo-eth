@@ -77,6 +77,29 @@ module.exports = async function(deployer, network, accounts) {
         console.log(`Voted for proposal: ${proposalId}`);
         await iHEODao.executeProposal(proposalId, {from: accounts[1]});
         console.log(`Executed proposal: ${proposalId}`);
+    } else if (network == "goerli") {
+        //add USDC to accepted currencies
+        const iHEODao = await HEODAO.deployed();
+        var txReceipt = await iHEODao.proposeVote(1, 0, KEY_ACCEPTED_COINS, ["0x07865c6E87B9F70255377e024ace6630C1Eaa37F"], [1], 259201, 51,
+            {from: accounts[0]});
+        console.log("Proposed vote to add test coin to accepted coins. Waiting for events");
+        var proposalId;
+        var events = txReceipt.logs;
+        if(events && events.length > 0) {
+            console.log("got events");
+            console.log(events[0]);
+            proposalId = events[0].args.proposalId;
+            console.log(`Found proposal ${proposalId}`);
+        } else {
+            console.log("Did not find any events");
+            return;
+        }
+        await iHEODao.vote(proposalId, 1, ONE_COIN, {from: accounts[0]});
+        await iHEODao.vote(proposalId, 1, ONE_COIN, {from: accounts[1]});
+        await iHEODao.vote(proposalId, 1, ONE_COIN, {from: accounts[2]});
+        console.log(`Voted for proposal: ${proposalId}`);
+        await iHEODao.executeProposal(proposalId, {from: accounts[1]});
+        console.log(`Executed proposal: ${proposalId}`);
     } else if (network == "bsc") {
         //add stable-coin to accepted currencies
         const iHEODao = await HEODAO.deployed();
