@@ -6,8 +6,8 @@ const web3 = new Web3();
 const fs = require('fs');
 const MNEMONIC = fs.readFileSync(".secret_testnet").toString().trim();
 //const MNEMONIC = fs.readFileSync(".secret_mainnet").toString().trim();
-//const ROOT_ACOUNT = "0x02C364e8048C60c980d4C1abb9918f66D716d603";
-const ROOT_ACOUNT = "0x403E550f5E4702BE7e0e80E57fd5F35395322658";
+const ROOT_ACOUNT = "0x02C364e8048C60c980d4C1abb9918f66D716d603";
+//const ROOT_ACOUNT = "0x403E550f5E4702BE7e0e80E57fd5F35395322658";
 const startIndex = 0;
 const numberOfAccounts = 3;
 
@@ -105,7 +105,13 @@ module.exports = {
         },
         auroratest: {
             provider: () => setupWallet('https://testnet.aurora.dev'),
-            network_id: 0x4e454153,
+            network_id: 1313161555,
+            gas: 10000000,
+            from: ROOT_ACOUNT // CHANGE THIS ADDRESS
+        },
+        aurora: {
+            provider: () => setupWallet('https://mainnet.aurora.dev'),
+            network_id: 1313161554,
             gas: 10000000,
             from: ROOT_ACOUNT // CHANGE THIS ADDRESS
         },
