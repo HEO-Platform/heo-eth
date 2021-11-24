@@ -2,6 +2,8 @@
 .openzeppelin
 .secret_testnet
 .secret_mainnet
+.pk_testnet
+.pk_mainnet
 build
 node_modules
 package-lock.json

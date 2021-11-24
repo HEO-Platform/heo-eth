@@ -1,26 +1,19 @@
-const HDWalletProvider = require('truffle-hdwallet-provider');
-const fs = require('fs');
-const mnemonic = fs.readFileSync(".secret_testnet").toString().trim();
+const Web3 = require('web3')
+const ContractKit = require('@celo/contractkit')
+const web3 = new Web3('https://alfajores-forno.celo-testnet.org')
+const kit = ContractKit.newKitFromWeb3(web3)
+const getAccount = require('./getAccount').getAccount
+
+async function awaitWrapper(){
+    let account = await getAccount()
+    console.log(`Root account is ${account.address}`)
+    kit.connection.addAccount(account.privateKey)
+}
+awaitWrapper();
+
 //const mnemonic = fs.readFileSync(".secret_mainnet").toString().trim();
 module.exports = {
-  // Uncommenting the defaults below 
-  // provides for an easier quick-start with Ganache.
-  // You can also follow this format for other networks;
-  // see <http://truffleframework.com/docs/advanced/configuration>
-  // for more details on how to specify configuration options!
-  //
-  //networks: {
-  //  development: {
-  //    host: "127.0.0.1",
-  //    port: 7545,
-  //    network_id: "*"
-  //  },
-  //  test: {
-  //    host: "127.0.0.1",
-  //    port: 7545,
-  //    network_id: "*"
-  //  }
-  //}
+
     plugins: [
       'truffle-contract-size'
     ],
@@ -48,33 +41,9 @@ module.exports = {
             accounts: 10,
             defaultEtherBalance: 500
         },
-        bsctestnet: {
-            provider: () => new HDWalletProvider(mnemonic, `https://data-seed-prebsc-1-s1.binance.org:8545`, 0, 3),
-            network_id: 97,
-            confirmations: 5,
-            timeoutBlocks: 200,
-            skipDryRun: true
-        },
-        bscdev: {
-            provider: () => new HDWalletProvider(mnemonic, `https://data-seed-prebsc-1-s1.binance.org:8545`, 0, 3),
-            network_id: 97,
-            confirmations: 5,
-            timeoutBlocks: 200,
-            skipDryRun: true
-        },
-        bsc: {
-            provider: () => new HDWalletProvider(mnemonic, `https://bsc-dataseed1.binance.org`, 0, 3),
-            network_id: 56,
-            confirmations: 5,
-            timeoutBlocks: 200,
-            skipDryRun: true
-        },
-        rinkeby:{
-            provider: () => new HDWalletProvider(mnemonic, 'https://rinkeby.infura.io/v3/56dea47710364cc1aa0163e29adfdd24', 0, 3),
-            network_id: 4,
-            confirmations: 5,
-            timeoutBlocks: 200,
-            skipDryRun: true
+        alfajores: {
+            provider: kit.connection.web3.currentProvider, // CeloProvider
+            network_id: 44787                              // Alfajores network id
         }
     }
 };

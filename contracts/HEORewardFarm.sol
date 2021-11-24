@@ -2,11 +2,11 @@
 pragma solidity >=0.6.1;
 
 import "./IHEORewardFarm.sol";
-import "openzeppelin-solidity/contracts/math/Math.sol";
-import "openzeppelin-solidity/contracts/GSN/Context.sol";
-import "openzeppelin-solidity/contracts/math/SafeMath.sol";
-import "openzeppelin-solidity/contracts/token/ERC20/ERC20.sol";
-import "openzeppelin-solidity/contracts/token/ERC20/SafeERC20.sol";
+import "@openzeppelin/contracts@3.3.0/math/Math.sol";
+import "@openzeppelin/contracts@3.3.0/GSN/Context.sol";
+import "@openzeppelin/contracts@3.3.0/math/SafeMath.sol";
+import "@openzeppelin/contracts@3.3.0/token/ERC20/ERC20.sol";
+import "@openzeppelin/contracts@3.3.0/token/ERC20/SafeERC20.sol";
 import "./IHEOPriceOracle.sol";
 import "./IHEOCampaign.sol";
 import "./IHEOCampaignRegistry.sol";

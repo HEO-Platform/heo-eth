@@ -12,6 +12,12 @@ const ONE_COIN = web3.utils.toWei("1");
 module.exports = async function(deployer, network, accounts) {
     if(network != "test") {
         console.log(`Network is ${network}`);
+        if(!accounts[1]) {
+            accounts[1] = "0x748351f954Af3C95a41b88ba7563453Ab98eA085";
+        }
+        if(!accounts[2]) {
+            accounts[2] = "0xa15a19C348DfF6289f3D4D8bC85fd00FBfA4a20A";
+        }
         console.log(`Accounts are ${accounts[0]}, ${accounts[1]}, ${accounts[2]}`);
         const KEY_PLATFORM_TOKEN_ADDRESS = 5;
         const KEY_CAMPAIGN_FACTORY = 0;
@@ -36,8 +42,8 @@ module.exports = async function(deployer, network, accounts) {
         const platformTokenAddress = await iHEOParams.contractAddress.call(KEY_PLATFORM_TOKEN_ADDRESS);
         console.log(`HEO coin address: ${platformTokenAddress}`);
         const iToken = await HEOToken.at(platformTokenAddress);
-        try {
-            for (let i = 0; i < 3; i++) {
+        for (let i = 0; i < 3; i++) {
+            try {
                 console.log(`Registering account ${i} for voting`);
                 let txReceipt = await iToken.approve(iStaking.address, web3.utils.toWei("1"), {from: accounts[i]})
                 //console.log("Receipt:");
@@ -47,14 +53,14 @@ module.exports = async function(deployer, network, accounts) {
                 txReceipt = await iHEODao.registerToVote(web3.utils.toWei("1"), platformTokenAddress, {from: accounts[i]});
                 console.log(`Register transaction cost: ${txReceipt.receipt.gasUsed}`);
                 totalGasUsed += txReceipt.receipt.gasUsed;
+            } catch (err) {
+                console.log("likely rerunning migration. Ignoring error.")
+                console.log(err);
             }
-        } catch (err) {
-            console.log("likely rerunning migration. Ignoring error.")
-            console.log(err);
         }
 
         //set campaign factory address by vote
-        let txReceipt = await iHEODao.proposeVote(3, 0, KEY_CAMPAIGN_FACTORY, [iCampaignFactory.address], [1], 259201, 51,
+      /*  let txReceipt = await iHEODao.proposeVote(3, 0, KEY_CAMPAIGN_FACTORY, [iCampaignFactory.address], [1], 259201, 51,
             {from: accounts[0]});
         console.log("Proposed vote to set campaign factory. Waiting for events");
         console.log(`Proposed vote cost: ${txReceipt.receipt.gasUsed}`);
@@ -69,8 +75,8 @@ module.exports = async function(deployer, network, accounts) {
                     proposalId = events[0].returnValues.proposalId;
                 }
             }
-        }
-
+        }*/
+        proposalId = "0xaefc457f4d9fc54e85b0134e8fa614265b9c7874e9cc2e4e25da268fbd580bfb";
         console.log(`Found proposal: ${proposalId}`);
         txReceipt = await iHEODao.vote(proposalId, 1, ONE_COIN, {from: accounts[0]});
         console.log(`Vote cost: ${txReceipt.receipt.gasUsed}`);
