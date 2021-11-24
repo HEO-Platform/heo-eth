@@ -4,14 +4,13 @@ const Web3 = require('web3');
 const web3 = new Web3();
 
 const fs = require('fs');
-const MNEMONIC = fs.readFileSync(".secret_testnet").toString().trim();
-//const MNEMONIC = fs.readFileSync(".secret_mainnet").toString().trim();
-const ROOT_ACOUNT = "0x02C364e8048C60c980d4C1abb9918f66D716d603";
-//const ROOT_ACOUNT = "0x403E550f5E4702BE7e0e80E57fd5F35395322658";
+//const MNEMONIC = fs.readFileSync(".secret_testnet").toString().trim();
+const MNEMONIC = fs.readFileSync(".secret_mainnet").toString().trim();
+//const ROOT_ACOUNT = "0x02C364e8048C60c980d4C1abb9918f66D716d603";
+const ROOT_ACOUNT = "0x403E550f5E4702BE7e0e80E57fd5F35395322658";
 const startIndex = 0;
 const numberOfAccounts = 3;
 
-//const ROOT_ACOUNT = "0x403e550f5e4702be7e0e80e57fd5f35395322658";
 let hdWalletProvider;
 const setupWallet = (
     url
@@ -53,7 +52,7 @@ module.exports = {
     ],
     compilers: {
         solc: {
-            version: "0.8.0",
+            version: "0.6.12",
                 // Can also be set to "native" to use a native solc
             docker: false, // Use a version obtained through docker
             parser: "solcjs", // Leverages solc-js purely for speedy parsing
@@ -107,13 +106,13 @@ module.exports = {
             provider: () => setupWallet('https://testnet.aurora.dev'),
             network_id: 1313161555,
             gas: 10000000,
-            from: ROOT_ACOUNT // CHANGE THIS ADDRESS
+            from: ROOT_ACOUNT
         },
         aurora: {
             provider: () => setupWallet('https://mainnet.aurora.dev'),
             network_id: 1313161554,
             gas: 10000000,
-            from: ROOT_ACOUNT // CHANGE THIS ADDRESS
+            from: ROOT_ACOUNT
         },
         ethereum: {
             provider: () => new HDWalletProvider(MNEMONIC, `https://mainnet.infura.io/v3/56dea47710364cc1aa0163e29adfdd24`, 0, 3),
