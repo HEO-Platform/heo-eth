@@ -4,7 +4,7 @@ const path = require('path')
 var web3 = new Web3()
 
 
-const filePath = path.join(__dirname, './.pk_testnet')
+const filePath = path.join(__dirname, './.pk_mainnet')
 
 function getAccount() {
     return new Promise(resolve => {

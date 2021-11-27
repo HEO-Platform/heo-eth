@@ -81,9 +81,6 @@ function _writeFile(artifactName, abiOnly, instance, network) {
     }
 
     let fd = fs.openSync(`./build/web/${network}/${artifactName}.js`, 'a');
-    if(!abiOnly) {
-        fs.appendFileSync(fd, "import web3 from './web3';\n");
-    }
     fs.appendFileSync(fd, "const abi=");
     fs.appendFileSync(fd, data);
 
@@ -92,11 +89,7 @@ function _writeFile(artifactName, abiOnly, instance, network) {
         fs.appendFileSync(fd, "export default abi;\n");
     } else {
         fs.appendFileSync(fd, `;\nconst address = "${instance.address}";\n`);
-        fs.appendFileSync(fd, "const instance = new web3.eth.Contract(\n");
-        fs.appendFileSync(fd, "    abi,\n");
-        fs.appendFileSync(fd, "    address,\n");
-        fs.appendFileSync(fd, ");\n\n");
-        fs.appendFileSync(fd, "export default instance;\n");
+        fs.appendFileSync(fd,"\nexport {abi, address};\n");
     }
 
     fs.closeSync(fd);

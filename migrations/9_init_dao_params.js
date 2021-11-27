@@ -7,10 +7,10 @@ module.exports = async function(deployer, network, accounts) {
     if(network != "test") {
         console.log(`Network is ${network}`);
         if(!accounts[1]) {
-            accounts[1] = "0x748351f954Af3C95a41b88ba7563453Ab98eA085";
+            accounts[1] = "0x451e8791483CC82ADfd9d5a349D0DF03FBDcF44c";
         }
         if(!accounts[2]) {
-            accounts[2] = "0xa15a19C348DfF6289f3D4D8bC85fd00FBfA4a20A";
+            accounts[2] = "0xCcB643dC88B49687a41dbE7F39404D4Fa23beDAA";
         }
         console.log(`Accounts are ${accounts[0]}, ${accounts[1]}, ${accounts[2]}`);
         const KEY_PLATFORM_TOKEN_ADDRESS = 5;

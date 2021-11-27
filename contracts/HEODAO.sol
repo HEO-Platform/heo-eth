@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: MIT
 pragma solidity >=0.6.1;
 
-import "@openzeppelin/contracts@3.3.0/math/SafeMath.sol";
-import "@openzeppelin/contracts@3.3.0/access/Ownable.sol";
-import "@openzeppelin/contracts@3.3.0/token/ERC20/IERC20.sol";
-import "@openzeppelin/contracts@3.3.0/token/ERC20/SafeERC20.sol";
-import "@openzeppelin/contracts@3.3.0/utils/ReentrancyGuard.sol";
+import "openzeppelin-solidity/contracts/math/SafeMath.sol";
+import "openzeppelin-solidity/contracts/access/Ownable.sol";
+import "openzeppelin-solidity/contracts/token/ERC20/IERC20.sol";
+import "openzeppelin-solidity/contracts/token/ERC20/SafeERC20.sol";
+import "openzeppelin-solidity/contracts/utils/ReentrancyGuard.sol";
 
 import "./HEOToken.sol";
 import "./IHEOBudget.sol";

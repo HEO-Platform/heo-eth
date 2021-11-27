@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity >=0.6.1;
 
-import "@openzeppelin/contracts@3.3.0/access/Ownable.sol";
+import "openzeppelin-solidity/contracts/access/Ownable.sol";
 import "./IHEOCampaignFactory.sol";
 import "./IHEOCampaign.sol";
 import "./IHEOCampaignRegistry.sol";

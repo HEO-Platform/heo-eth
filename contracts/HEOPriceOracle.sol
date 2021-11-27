@@ -1,6 +1,6 @@
 pragma solidity >=0.6.1;
-import "@openzeppelin/contracts@3.3.0/access/Ownable.sol";
-import "@openzeppelin/contracts@3.3.0/math/SafeMath.sol";
+import "openzeppelin-solidity/contracts/access/Ownable.sol";
+import "openzeppelin-solidity/contracts/math/SafeMath.sol";
 import "./IHEOPriceOracle.sol";
 
 contract HEOPriceOracle is IHEOPriceOracle, Ownable {
