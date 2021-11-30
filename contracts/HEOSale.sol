@@ -32,7 +32,8 @@ contract HEOSale is IHEOBudget, Context, ReentrancyGuard {
     uint256 public totalSales;
     uint256 public totalRaised;
     uint256 public unsoldBalance; //balance of equity tokens that has not been assigned to sales yet
-
+    address public acceptedToken;
+    address public treasurer;
     HEODAO _dao;
 
     address payable private _owner;
@@ -60,11 +61,11 @@ contract HEOSale is IHEOBudget, Context, ReentrancyGuard {
         return equity;
     }
 
-    function sell(uint256 amount, address token) external nonReentrant {
+    function sell(uint256 amount) external nonReentrant {
         require(amount > 0, "HEOSale: amount has to be greater than zero");
-        require(_dao.heoParams().isTokenAccepted(token) > 0, "HEOSale: currency is not accepted as investment");
-
-        (uint256 heoPrice, uint256 priceDecimals) = IHEOPriceOracle(_dao.heoParams().contractAddress(HEOLib.PRICE_ORACLE)).getPrice(token);
+        require(acceptedToken != address(0), "HEOSale: aceptedToken is not set");
+        (uint256 heoPrice, uint256 priceDecimals) = IHEOPriceOracle(_dao.heoParams().contractAddress(HEOLib.PRICE_ORACLE)).getPrice(acceptedToken);
+        require(heoPrice > 0, "HEOSale: HEO price is not set acceptedToken");
         uint256 equity = amount.div(heoPrice).mul(priceDecimals);
         require(unsoldBalance >= equity, "HEOSale: not enough HEO to sell");
 
@@ -74,7 +75,7 @@ contract HEOSale is IHEOBudget, Context, ReentrancyGuard {
         Sale memory sale;
         sale.key = key;
         sale.amount = amount;
-        sale.token = token;
+        sale.token = acceptedToken;
         sale.investor = _msgSender();
         sale.ts = block.timestamp;
         sale.equity = equity;
@@ -86,7 +87,7 @@ contract HEOSale is IHEOBudget, Context, ReentrancyGuard {
         unsoldBalance = unsoldBalance.sub(equity);
         totalSales = totalSales.add(1);
         totalRaised = totalRaised.add(amount);
-        ERC20 paymentToken = ERC20(token);
+        ERC20 paymentToken = ERC20(acceptedToken);
         paymentToken.safeTransferFrom(_msgSender(), address(_dao), amount);
         emit InvestmentReceived(_msgSender(), amount, equity);
     }
@@ -147,7 +148,13 @@ contract HEOSale is IHEOBudget, Context, ReentrancyGuard {
     }
 
     function assignTreasurer(address _treasurer) external override onlyOwner {
-        // do nothing
+        require(_treasurer != address(0), "HEOSale: _treasurer cannot be zero address");
+        treasurer = _treasurer;
+    }
+
+    modifier onlyTreasurer() {
+        require(treasurer == _msgSender(), "HEOSale: caller is not the treasurer");
+        _;
     }
 
     /**
@@ -158,6 +165,10 @@ contract HEOSale is IHEOBudget, Context, ReentrancyGuard {
         require(newOwner != address(0), "owner cannot be a zero address");
         emit OwnershipTransferred(_owner, newOwner);
         _owner = newOwner;
+    }
+
+    function setAcceptedToken(address _token) external onlyTreasurer {
+        acceptedToken = _token;
     }
 }
 
