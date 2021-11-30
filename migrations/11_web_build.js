@@ -6,7 +6,7 @@ const HEOCampaignFactory = artifacts.require("HEOCampaignFactory");
 const HEOCampaignRegistry = artifacts.require("HEOCampaignRegistry");
 const HEOPriceOracle = artifacts.require("HEOPriceOracle");
 const HEORewardFarm = artifacts.require("HEORewardFarm");
-const HEOBudget = artifacts.require("HEOBudget");
+const HEOSale = artifacts.require("HEOSale");
 
 const fs = require('fs');
 module.exports = async function(deployer, network, accounts) {
@@ -57,10 +57,14 @@ module.exports = async function(deployer, network, accounts) {
 
         //HEOToken
         const KEY_PLATFORM_TOKEN_ADDRESS = 5;
-        const iHEOParams = await HEOParameters.deployed();
+        const iHEOParams = await HEOParameters.deployed(deployed);
         const platformTokenAddress = await iHEOParams.contractAddress.call(KEY_PLATFORM_TOKEN_ADDRESS);
         instance = await HEOToken.at(platformTokenAddress);
         _writeFile("HEOToken", false, instance, network);
+
+        //HEOSale
+        instance = await HEOSale.deployed();
+        _writeFile("HEOSale", false, instance, network);
     }
 
 }
@@ -81,9 +85,6 @@ function _writeFile(artifactName, abiOnly, instance, network) {
     }
 
     let fd = fs.openSync(`./build/web/${network}/${artifactName}.js`, 'a');
-    if(!abiOnly) {
-        fs.appendFileSync(fd, "import web3 from './web3';\n");
-    }
     fs.appendFileSync(fd, "const abi=");
     fs.appendFileSync(fd, data);
 
@@ -92,11 +93,7 @@ function _writeFile(artifactName, abiOnly, instance, network) {
         fs.appendFileSync(fd, "export default abi;\n");
     } else {
         fs.appendFileSync(fd, `;\nconst address = "${instance.address}";\n`);
-        fs.appendFileSync(fd, "const instance = new web3.eth.Contract(\n");
-        fs.appendFileSync(fd, "    abi,\n");
-        fs.appendFileSync(fd, "    address,\n");
-        fs.appendFileSync(fd, ");\n\n");
-        fs.appendFileSync(fd, "export default instance;\n");
+        fs.appendFileSync(fd,"\nexport {abi, address};\n");
     }
 
     fs.closeSync(fd);
