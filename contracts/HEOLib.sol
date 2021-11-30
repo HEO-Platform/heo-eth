@@ -17,6 +17,7 @@ library HEOLib {
     uint8 public constant ENABLE_FUNDRAISER_WHITELIST = 11;
     uint8 public constant ANON_CAMPAIGN_LIMIT = 12;
     uint8 public constant ANON_DONATION_LIMIT = 13;
+    uint8 public constant INVESTMENT_VESTING_SECONDS = 14;
 
     // Indexes of reserved addr parameters
     uint8 public constant PARAM_WHITE_LIST = 0;
