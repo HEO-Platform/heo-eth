@@ -13,7 +13,7 @@ import "./IHEOCampaignRegistry.sol";
 import "./HEODAO.sol";
 import "./HEOLib.sol";
 
-contract HEOPrivateSale is IHEOBudget, Context, ReentrancyGuard {
+contract HEOSale is IHEOBudget, Context, ReentrancyGuard {
     using SafeMath for uint256;
     using SafeERC20 for ERC20;
     struct Sale {
@@ -43,7 +43,7 @@ contract HEOPrivateSale is IHEOBudget, Context, ReentrancyGuard {
     * @dev Throws if called by any account other than the owner.
     */
     modifier onlyOwner() {
-        require(_owner == _msgSender(), "HEOPrivateSale: caller is not the owner");
+        require(_owner == _msgSender(), "HEOSale: caller is not the owner");
         _;
     }
 
@@ -61,17 +61,15 @@ contract HEOPrivateSale is IHEOBudget, Context, ReentrancyGuard {
     }
 
     function sell(uint256 amount, address token) external nonReentrant {
-        require(amount > 0, "HEOPrivateSale: amount has to be greater than zero");
-        require(_dao.heoParams().isTokenAccepted(token) > 0, "HEOPrivateSale: currency is not accepted as investment");
+        require(amount > 0, "HEOSale: amount has to be greater than zero");
+        require(_dao.heoParams().isTokenAccepted(token) > 0, "HEOSale: currency is not accepted as investment");
 
         (uint256 heoPrice, uint256 priceDecimals) = IHEOPriceOracle(_dao.heoParams().contractAddress(HEOLib.PRICE_ORACLE)).getPrice(token);
-        //1 000 000 000 000 000 000 tkbits = 1 BUSD
-        //HEO = 0.05 BUSD = 5 000 000 000 000 000 0 tkbits
         uint256 equity = amount.div(heoPrice).mul(priceDecimals);
-        require(unsoldBalance >= equity, "HEOPrivateSale: not enough HEO to sell");
+        require(unsoldBalance >= equity, "HEOSale: not enough HEO to sell");
 
         bytes32 key = keccak256(abi.encodePacked(_msgSender(), amount, block.timestamp));
-        require(_sales[key].amount == 0, "HEOPrivateSale: please wait until next block to make the next investment");
+        require(_sales[key].amount == 0, "HEOSale: please wait until next block to make the next investment");
 
         Sale memory sale;
         sale.key = key;
@@ -122,9 +120,9 @@ contract HEOPrivateSale is IHEOBudget, Context, ReentrancyGuard {
 
     function claimEquity(address destination, bytes32 key, uint256 amount) public {
         Sale storage sale = _sales[key];
-        require(sale.investor == _msgSender(), "HEOPrivateSale: caller is not the investor");
+        require(sale.investor == _msgSender(), "HEOSale: caller is not the investor");
         uint256 newClaimed = sale.claimed.add(amount);
-        require(newClaimed <= vestedEquity(key), "HEOPrivateSale: claim exceeds vested equity");
+        require(newClaimed <= vestedEquity(key), "HEOSale: claim exceeds vested equity");
         sale.claimed = newClaimed;
         ERC20(_dao.heoParams().contractAddress(HEOLib.PLATFORM_TOKEN_ADDRESS)).safeTransfer(destination, amount);
     }
