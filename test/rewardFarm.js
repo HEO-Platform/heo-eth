@@ -10,7 +10,6 @@ const HEOCampaignRegistry = artifacts.require("HEOCampaignRegistry");
 const StableCoinForTests = artifacts.require("StableCoinForTests");
 const HEORewardFarm = artifacts.require("HEORewardFarm");
 const ONE_COIN = web3.utils.toWei("1");
-const fs = require('fs');
 const { compress, decompress } = require('shrink-string');
 
 var BN = web3.utils.BN;
@@ -43,6 +42,7 @@ contract("HEORewardFarm", (accounts) => {
         treasurer = accounts[5];
         donorAccount2 = accounts[6];
     });
+
     beforeEach(async () => {
         iHEOParams = await HEOParameters.new();
         iStaking = await HEOStaking.new();
