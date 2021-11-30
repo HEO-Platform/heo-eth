@@ -4,7 +4,6 @@ const HEODAO = artifacts.require("HEODAO");
 const HEOParameters = artifacts.require("HEOParameters");
 const HEOStaking = artifacts.require("HEOStaking");
 const HEOCampaign = artifacts.require("HEOCampaign");
-const HEOManualDistribution = artifacts.require("HEOManualDistribution");
 const HEOCampaignFactory = artifacts.require("HEOCampaignFactory");
 const HEOPriceOracle = artifacts.require("HEOPriceOracle");
 const HEOCampaignRegistry = artifacts.require("HEOCampaignRegistry");
@@ -28,6 +27,8 @@ const KEY_ACCEPTED_COINS = 4;
 const KEY_PRICE_ORACLE = 4;
 const KEY_TREASURER = 6;
 const KEY_REWARD_FARM = 2;
+const KEY_DONATION_YIELD = 6;
+
 var RAW_META = {title:"Test Title", vl:"https://youtube.com/url"};
 var compressed_meta;
 
@@ -204,6 +205,70 @@ contract("HEORewardFarm", (accounts) => {
             assert.equal(err.reason, "HEORewardFarm: campaign is not registered", `Wrong error: ${err}`);
         }
     });
+    it("When DONATION_YIELD==unassigned balance/10, reward=donation/HEO price", async()=> {
+        //send 200K HEO to reward farm
+        await iDAO.proposeVote(2, 3, 0, [iRewardFarm.address, platformTokenAddress],
+            [web3.utils.toWei("200000")], 259201, 51, {from: founder1});
+        let events = await iDAO.getPastEvents('ProposalCreated');
+        let proposalId = events[0].returnValues.proposalId;
+
+        //cast votes
+        await iDAO.vote(proposalId, 1, ONE_COIN, {from: founder1});
+        await iDAO.vote(proposalId, 1, ONE_COIN, {from: founder2});
+        await iDAO.vote(proposalId, 1, ONE_COIN, {from: founder3});
+
+        //execute the proposal
+        await iDAO.executeProposal(proposalId, {from: founder1});
+
+        //set donation yield to 200K
+        await iDAO.proposeVote(0, 0, KEY_DONATION_YIELD, [], [20000], 259201, 51, {from: founder1});
+        events = await iDAO.getPastEvents('ProposalCreated');
+        proposalId = events[0].returnValues.proposalId;
+
+        // vote for different values each
+        await iDAO.vote(proposalId, 1, ONE_COIN, {from: founder1});
+        await iDAO.vote(proposalId, 1, ONE_COIN, {from: founder2});
+        await iDAO.vote(proposalId, 1, ONE_COIN, {from: founder3});
+
+        //execute the proposal
+        await iDAO.executeProposal(proposalId, {from: founder2});
+
+        //set HEO price
+        iPriceOracle.setPrice(iTestCoin.address, 5, 100);
+        // default fee is 2.5% ($10K for $400K campaign), which is 200K HEO at 0.05/HEO
+        await iCharityBudget.sendTo(charityAccount, platformTokenAddress, web3.utils.toWei("200000"), {from: treasurer});
+        await iToken.approve(iCampaignFactory.address, web3.utils.toWei("200000"), {from: charityAccount});
+        await iCampaignFactory.createRewardCampaign(web3.utils.toWei("400000"), iTestCoin.address,
+            charityAccount, compressed_meta, {from: charityAccount});
+        let myCampaigns = await iRegistry.myCampaigns.call({from: charityAccount});
+        let campaign = myCampaigns[0];
+
+        //calculate full reward before making the donation
+        let fullReward = await iRewardFarm.fullReward(web3.utils.toWei("100"), 5, 100);
+        assert.isTrue(fullReward.eq(new BN(web3.utils.toWei("2000"))), `Expecting reward of 2000HEO, got ${fullReward}`);
+
+        fullReward = await iRewardFarm.fullReward(web3.utils.toWei("10000"), 5, 100);
+        assert.isTrue(fullReward.eq(new BN(web3.utils.toWei("200000"))), `Expecting reward of 200K HEO, got ${fullReward}`);
+
+        //check unassignedBalance
+        let unassignedBalance = await iRewardFarm.unassignedBalance();
+        assert.isTrue(unassignedBalance.eq(new BN(web3.utils.toWei("200000"))),
+            `Expecting balance of 25M, got ${unassignedBalance}`);
+
+        //donate 100 USDT
+        await iTestCoin.approve(campaign, web3.utils.toWei("100"), {from: donorAccount});
+        campaign = await HEOCampaign.at(campaign);
+        await campaign.donateERC20(web3.utils.toWei("100"), {from: donorAccount});
+
+        //check unassignedBalance
+        unassignedBalance = await iRewardFarm.unassignedBalance();
+        assert.isTrue(unassignedBalance.eq(new BN(web3.utils.toWei("198000"))),
+            `Expecting balance of 198,000, got ${unassignedBalance}`);
+
+        fullReward = await iRewardFarm.fullReward(web3.utils.toWei("9900"), 5, 100);
+        assert.isTrue(fullReward.eq(new BN(web3.utils.toWei("196020"))), `Expecting reward of 196,020 HEO, got ${fullReward}`);
+    });
+
     it("Should calculate reward of 10 HEO for a donation of 100 USDT with 1 HEO = 25 USDT", async() => {
         //send 25M HEO to the reward farm
         await iDAO.proposeVote(2, 3, 0, [iRewardFarm.address, platformTokenAddress],
