@@ -48,7 +48,7 @@ module.exports = {
             accounts: 10,
             defaultEtherBalance: 500
         },
-        bsctestnet: {
+        bsctest: {
             provider: () => new HDWalletProvider(mnemonic, `https://data-seed-prebsc-1-s1.binance.org:8545`, 0, 3),
             network_id: 97,
             confirmations: 5,
