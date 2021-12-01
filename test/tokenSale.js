@@ -139,11 +139,24 @@ contract("HEOSale", (accounts) => {
         //set HEO price to $0.05
         await iPriceOracle.setPrice(iTestCoin.address, 5, 100);
         await iSale.setAcceptedToken(iTestCoin.address, {from: treasurer});
+        await iSale.setMinimum(web3.utils.toWei("50000"), {from: treasurer});
         var equity = await iSale.calculateEquity(web3.utils.toWei("400000"), iTestCoin.address);
         assert.isTrue(new BN(web3.utils.toWei("8000000")).eq(new BN(equity)),
             `Expected equity should be ${web3.utils.toWei("8000000")}, but found ${equity}`);
-        //invest $400K
+
+        //approve 400K
         await iTestCoin.approve(iSale.address, web3.utils.toWei("400000"), {from: investor1});
+
+        //try investing below minimum
+        try {
+            await iSale.sell(web3.utils.toWei("1000"), {from: investor1});
+            assert.fail("Should not be able to sell less than $50K worth of HEO");
+        } catch (err) {
+            assert.equal(err.reason, "HEOSale: amount has to be greater than minimum investment",
+                `Unexpected exception: ${err}`);
+        }
+
+        //invest $400K
         await iSale.sell(web3.utils.toWei("400000"), {from: investor1});
 
         //check that money moved from investor to DAO
@@ -160,7 +173,7 @@ contract("HEOSale", (accounts) => {
 
         await iTestCoin.approve(iSale.address, web3.utils.toWei("400000"), {from: investor2});
         try {
-            await iSale.sell(web3.utils.toWei("1"), {from: investor2});
+            await iSale.sell(web3.utils.toWei("51000"), {from: investor2});
             assert.fail("Should not be able to sell more HEO");
         } catch (err) {
             assert.equal(err.reason, "HEOSale: not enough HEO to sell",
@@ -303,6 +316,7 @@ contract("HEOSale", (accounts) => {
         //set HEO price to $0.1
         await iPriceOracle.setPrice(iTestCoin.address, 1, 10);
         await iSale.setAcceptedToken(iTestCoin.address, {from: treasurer});
+        await iSale.setMinimum(web3.utils.toWei("10000"), {from: treasurer});
 
         var equity = await iSale.calculateEquity(web3.utils.toWei("300000"), iTestCoin.address);
         assert.isTrue(new BN(web3.utils.toWei("3000000")).eq(new BN(equity)),

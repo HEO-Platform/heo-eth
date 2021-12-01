@@ -34,7 +34,8 @@ contract HEOSale is IHEOBudget, Context, ReentrancyGuard {
     uint256 public unsoldBalance; //balance of equity tokens that has not been assigned to sales yet
     address public acceptedToken;
     address public treasurer;
-    uint256 tge; //timestamp for TGE
+    uint256 public tge; //timestamp for TGE
+    uint256 public minInvestment;
     HEODAO _dao;
 
     address payable private _owner;
@@ -63,7 +64,7 @@ contract HEOSale is IHEOBudget, Context, ReentrancyGuard {
     }
 
     function sell(uint256 amount) external nonReentrant {
-        require(amount > 0, "HEOSale: amount has to be greater than zero");
+        require(amount > minInvestment, "HEOSale: amount has to be greater than minimum investment");
         require(acceptedToken != address(0), "HEOSale: aceptedToken is not set");
         (uint256 heoPrice, uint256 priceDecimals) = IHEOPriceOracle(_dao.heoParams().contractAddress(HEOLib.PRICE_ORACLE)).getPrice(acceptedToken);
         require(heoPrice > 0, "HEOSale: HEO price is not set acceptedToken");
@@ -186,6 +187,10 @@ contract HEOSale is IHEOBudget, Context, ReentrancyGuard {
 
     function setTGE(uint256 _tge) external onlyTreasurer {
         tge = _tge;
+    }
+
+    function setMinimum(uint256 _minInvestment) external onlyTreasurer {
+        minInvestment = _minInvestment;
     }
 }
 
