@@ -11,7 +11,6 @@ var BN = web3.utils.BN;
 const timeMachine = require('ganache-time-traveler');
 const KEY_INVESTMENT_VESTING_SECONDS = 14;
 const KEY_PLATFORM_TOKEN_ADDRESS = 5;
-const KEY_ACCEPTED_COINS = 4;
 const KEY_PRICE_ORACLE = 4;
 const KEY_TREASURER = 6;
 
@@ -175,8 +174,23 @@ contract("HEOSale", (accounts) => {
             `Sold equity should be ${web3.utils.toWei("8000000")}, but found ${equity}`);
 
         equity = await iSale.vestedEquity(sales[0]);
+        assert.isTrue(new BN(web3.utils.toWei("0")).eq(new BN(equity)),
+            `Vested equity should be 0, before TGE is set, but found ${equity}`);
+        let vestingSeconds = await iSale.saleVestingSeconds(sales[0]);
+        assert.isTrue(new BN("94608000").eq(new BN(vestingSeconds)),
+            `Expecting vestingSeconds to be 94608000, but found ${vestingSeconds}`);
+        //set TGE
+        var blockNumber = await web3.eth.getBlockNumber();
+        var chainTime = (await web3.eth.getBlock(blockNumber)).timestamp;
+        await iSale.setTGE(chainTime, {from: treasurer});
+
+        //move time 60 seconds
+        await timeMachine.advanceTimeAndBlock(60);
+        equity = await iSale.vestedEquity(sales[0]);
         assert.isTrue(new BN(web3.utils.toWei("8000000")).gt(new BN(equity)),
             `Vested equity should be less than ${web3.utils.toWei("8000000")}, but found ${equity}`);
+        assert.isTrue(new BN(web3.utils.toWei("0")).lt(new BN(equity)),
+            `Vested equity should be more than 0, but found ${equity}`);
 
         //advance time one year
         await timeMachine.advanceTimeAndBlock(31536000);
@@ -280,11 +294,16 @@ contract("HEOSale", (accounts) => {
             `Expecting claimed equity (${claimedEquity}) to be equal 8M HEO`);
         saleHEOBalance = await iToken.balanceOf(iSale.address);
         assert.isTrue(new BN("0").eq(new BN(saleHEOBalance)),`Expecting HEOSale to have 0 HEO, but found ${saleHEOBalance}`);
+
+        vestingSeconds = await iSale.saleVestingSeconds(sales[0]);
+        assert.isTrue(new BN("94608000").eq(new BN(vestingSeconds)),
+            `Expecting vestingSeconds to be 94608000, but found ${vestingSeconds}`);
     });
     it("Should allow investments from multiple investors", async() => {
         //set HEO price to $0.1
         await iPriceOracle.setPrice(iTestCoin.address, 1, 10);
         await iSale.setAcceptedToken(iTestCoin.address, {from: treasurer});
+
         var equity = await iSale.calculateEquity(web3.utils.toWei("300000"), iTestCoin.address);
         assert.isTrue(new BN(web3.utils.toWei("3000000")).eq(new BN(equity)),
             `Expected equity should be ${web3.utils.toWei("3000000")}, but found ${equity}`);
@@ -323,15 +342,54 @@ contract("HEOSale", (accounts) => {
         daoBalanceAfter = await iTestCoin.balanceOf.call(iDAO.address);
         assert.isTrue(new BN(daoBalanceAfter).eq(new BN(web3.utils.toWei("400000"))),
             `Expecting DAO to have $400K after sale. Found : ${daoBalanceAfter}`);
-        //advance time one year
-        await timeMachine.advanceTimeAndBlock(31536000);
-        //advance time one more year
-        await timeMachine.advanceTimeAndBlock(31536000);
-        //advance time one more year
-        await timeMachine.advanceTimeAndBlock(31536000);
+
+        //set TGE a year from now
+        var blockNumber = await web3.eth.getBlockNumber();
+        var chainTime = (await web3.eth.getBlock(blockNumber)).timestamp+31536000;
+        await iSale.setTGE(chainTime, {from: treasurer});
+
+        //check that no one has anything vested, because TGE is still in the future
+        var sales = await iSale.investorsSales.call(investor2);
+        try {
+            await iSale.claimEquity(investor2, sales[0], new BN(web3.utils.toWei("1")), {from: investor2});
+            assert.fail(`Expecting an exception`);
+        } catch (err) {
+            assert.equal(err.reason, "HEOSale: claim exceeds vested equity",
+                `Unexpected exception: ${err}`);
+        }
+        sales = await iSale.investorsSales.call(investor1);
+        try {
+            await iSale.claimEquity(investor1, sales[0], new BN(web3.utils.toWei("1")), {from: investor1});
+            assert.fail(`Expecting an exception`);
+        } catch (err) {
+            assert.equal(err.reason, "HEOSale: claim exceeds vested equity",
+                `Unexpected exception: ${err}`);
+        }
+        //advance time 6 months
+        await timeMachine.advanceTimeAndBlock(15768000);
+        //check that no one has anything vested, because TGE is still in the future
+        var sales = await iSale.investorsSales.call(investor2);
+        try {
+            await iSale.claimEquity(investor2, sales[0], new BN(web3.utils.toWei("1")), {from: investor2});
+            assert.fail(`Expecting an exception`);
+        } catch (err) {
+            assert.equal(err.reason, "HEOSale: claim exceeds vested equity",
+                `Unexpected exception: ${err}`);
+        }
+        sales = await iSale.investorsSales.call(investor1);
+        try {
+            await iSale.claimEquity(investor1, sales[0], new BN(web3.utils.toWei("1")), {from: investor1});
+            assert.fail(`Expecting an exception`);
+        } catch (err) {
+            assert.equal(err.reason, "HEOSale: claim exceeds vested equity",
+                `Unexpected exception: ${err}`);
+        }
+
+        //advance time 4 years
+        await timeMachine.advanceTimeAndBlock(126144000);
 
         //claim all investments
-        var sales = await iSale.investorsSales.call(investor1);
+        sales = await iSale.investorsSales.call(investor1);
         await iSale.claimEquity(investor1, sales[0], web3.utils.toWei("3000000"), {from: investor1});
         sales = await iSale.investorsSales.call(investor2);
         await iSale.claimEquity(investor2, sales[0], web3.utils.toWei("1000000"), {from: investor2});
@@ -344,39 +402,6 @@ contract("HEOSale", (accounts) => {
         assert.isTrue(new BN(investor2BalanceAfter).eq(new BN(web3.utils.toWei("1000000"))),
             `Expecting investor1 to have 1M HEO, but found ${investor2BalanceAfter}`);
 
-        //invest more
-        await iSale.sell(web3.utils.toWei("200000"), {from: investor2});
-        sales = await iSale.investorsSales.call(investor2);
-        try {
-            await iSale.claimEquity(investor2, sales[0], new BN(web3.utils.toWei("1")), {from: investor2});
-            assert.fail(`Expecting an exception`);
-        } catch (err) {
-            assert.equal(err.reason, "HEOSale: claim exceeds vested equity",
-                `Unexpected exception: ${err}`);
-        }
-        try {
-            await iSale.claimEquity(investor2, sales[1], new BN(web3.utils.toWei("1")), {from: investor2});
-            assert.fail(`Expecting an exception`);
-        } catch (err) {
-            assert.equal(err.reason, "HEOSale: claim exceeds vested equity",
-                `Unexpected exception: ${err}`);
-        }
-        //advance time one year
-        await timeMachine.advanceTimeAndBlock(31536000);
-        //advance time one more year
-        await timeMachine.advanceTimeAndBlock(31536000);
-        //advance time one more year
-        await timeMachine.advanceTimeAndBlock(31536000);
-        await iSale.claimEquity(investor2, sales[1], new BN(web3.utils.toWei("2000000")), {from: investor2});
-        investor2BalanceAfter = await iToken.balanceOf(investor2);
-        assert.isTrue(new BN(investor2BalanceAfter).eq(new BN(web3.utils.toWei("3000000"))),
-            `Expecting investor1 to have 3M HEO, but found ${investor2BalanceAfter}`);
-
-        //check Sale balance
-        var saleHEOBalance = await iToken.balanceOf(iSale.address);
-        unsold = await iSale.unsoldBalance.call();
-        assert.isTrue(new BN(unsold).eq(new BN(saleHEOBalance)),
-            `Expecting unsold HEO (${unsold})to be equal to HEOPrivateSlae balance of HEO (${saleHEOBalance})`);
 
         //vote to withdraw HEO from HEOSale
         await iDAO.proposeVote(2, 5, 0, [iSale.address, iToken.address], [0], 259201, 51, {from: founder1});
@@ -389,6 +414,7 @@ contract("HEOSale", (accounts) => {
 
         //execute the proposal
         var daoBalanceBefore = await iToken.balanceOf(iDAO.address);
+        var saleHEOBalance = await iToken.balanceOf(iSale.address);
         await iDAO.executeProposal(proposalId, {from: founder1});
         var daoBalanceAfter = await iToken.balanceOf(iDAO.address);
         assert.isTrue(new BN(daoBalanceAfter).eq(new BN(daoBalanceBefore).add(new BN(saleHEOBalance))),

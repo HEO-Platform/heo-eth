@@ -24,7 +24,7 @@ contract HEOSale is IHEOBudget, Context, ReentrancyGuard {
         uint256 ts; //timestamp when sale was made
         uint256 equity; //how much HEO this investor will get
         uint256 claimed; //how much HEO have been claimed
-        uint256 vestEndTs;
+        uint256 vestingSeconds; //duration of vesting in seconds
     }
 
     mapping(bytes32 => Sale) private _sales;
@@ -34,6 +34,7 @@ contract HEOSale is IHEOBudget, Context, ReentrancyGuard {
     uint256 public unsoldBalance; //balance of equity tokens that has not been assigned to sales yet
     address public acceptedToken;
     address public treasurer;
+    uint256 tge; //timestamp for TGE
     HEODAO _dao;
 
     address payable private _owner;
@@ -79,7 +80,7 @@ contract HEOSale is IHEOBudget, Context, ReentrancyGuard {
         sale.investor = _msgSender();
         sale.ts = block.timestamp;
         sale.equity = equity;
-        sale.vestEndTs = block.timestamp.add(_dao.heoParams().intParameterValue(HEOLib.INVESTMENT_VESTING_SECONDS));
+        sale.vestingSeconds = _dao.heoParams().intParameterValue(HEOLib.INVESTMENT_VESTING_SECONDS);
 
         _sales[key] = sale;
         _salesByInvestor[_msgSender()].push(key);
@@ -97,18 +98,30 @@ contract HEOSale is IHEOBudget, Context, ReentrancyGuard {
     }
 
     function vestedEquity(bytes32 key) public view returns (uint256) {
-        if(block.timestamp >= _sales[key].vestEndTs) {
+        if(tge == 0 || block.timestamp < tge) {
+            return 0;
+        }
+        uint256 vestingEnd = _sales[key].vestingSeconds.add(tge);
+        if(block.timestamp >= vestingEnd) {
             return _sales[key].equity;
         }
-        return _sales[key].equity.div(_sales[key].vestEndTs.sub(_sales[key].ts)).mul(block.timestamp - _sales[key].ts);
+        return _sales[key].equity.div(_sales[key].vestingSeconds).mul(block.timestamp - tge);
     }
 
-    function getSaleAmount(bytes32 key) external view returns(uint256) {
+    function saleAmount(bytes32 key) external view returns(uint256) {
         return _sales[key].amount;
     }
 
-    function getSaleToken(bytes32 key) external view returns(address) {
+    function saleTS(bytes32 key) external view returns(uint256) {
+        return _sales[key].ts;
+    }
+
+    function saleToken(bytes32 key) external view returns(address) {
         return _sales[key].token;
+    }
+
+    function saleVestingSeconds(bytes32 key) external view returns(uint256) {
+        return _sales[key].vestingSeconds;
     }
 
     function investorsSales(address investor) external view returns (bytes32[] memory) {
@@ -169,6 +182,10 @@ contract HEOSale is IHEOBudget, Context, ReentrancyGuard {
 
     function setAcceptedToken(address _token) external onlyTreasurer {
         acceptedToken = _token;
+    }
+
+    function setTGE(uint256 _tge) external onlyTreasurer {
+        tge = _tge;
     }
 }
 
