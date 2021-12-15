@@ -36,6 +36,7 @@ contract HEOSale is IHEOBudget, Context, ReentrancyGuard {
     address public treasurer;
     uint256 public tge; //timestamp for TGE
     uint256 public minInvestment;
+    mapping (address => uint256) approvedInvestors;
     HEODAO _dao;
 
     address payable private _owner;
@@ -64,8 +65,9 @@ contract HEOSale is IHEOBudget, Context, ReentrancyGuard {
     }
 
     function sell(uint256 amount) external nonReentrant {
-        require(amount > minInvestment, "HEOSale: amount has to be greater than minimum investment");
+        require(amount >= minInvestment, "HEOSale: amount has to be equal or greater than minimum investment");
         require(acceptedToken != address(0), "HEOSale: aceptedToken is not set");
+        require(approvedInvestors[_msgSender()] > 0, "HEOSale: address is not approved to invest");
         (uint256 heoPrice, uint256 priceDecimals) = IHEOPriceOracle(_dao.heoParams().contractAddress(HEOLib.PRICE_ORACLE)).getPrice(acceptedToken);
         require(heoPrice > 0, "HEOSale: HEO price is not set acceptedToken");
         uint256 equity = amount.div(heoPrice).mul(priceDecimals);
@@ -191,6 +193,18 @@ contract HEOSale is IHEOBudget, Context, ReentrancyGuard {
 
     function setMinimum(uint256 _minInvestment) external onlyTreasurer {
         minInvestment = _minInvestment;
+    }
+
+    function approveInvestor(address _investor) external onlyTreasurer {
+        approvedInvestors[_investor] = 1;
+    }
+
+    function unapproveInvestor(address _investor) external onlyTreasurer {
+        approvedInvestors[_investor] = 0;
+    }
+
+    function isInvestorApproved(address _investor) public view returns(uint256) {
+        return approvedInvestors[_investor];
     }
 }
 
