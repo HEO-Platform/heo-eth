@@ -123,7 +123,7 @@ contract("HEOSale", (accounts) => {
             await iSale.sell(web3.utils.toWei("1"), {from: investor1});
             assert.fail("Should not be able to sell HEO");
         } catch (err) {
-            assert.equal(err.reason, "HEOSale: HEO price is not set acceptedToken",
+            assert.equal(err.reason, "HEOSale: address is not approved to invest",
                 `Unexpected exception: ${err}`);
         }
         await iSale.setAcceptedToken("0x0000000000000000000000000000000000000000", {from: treasurer});
@@ -140,6 +140,7 @@ contract("HEOSale", (accounts) => {
         await iPriceOracle.setPrice(iTestCoin.address, 5, 100);
         await iSale.setAcceptedToken(iTestCoin.address, {from: treasurer});
         await iSale.setMinimum(web3.utils.toWei("50000"), {from: treasurer});
+
         var equity = await iSale.calculateEquity(web3.utils.toWei("400000"), iTestCoin.address);
         assert.isTrue(new BN(web3.utils.toWei("8000000")).eq(new BN(equity)),
             `Expected equity should be ${web3.utils.toWei("8000000")}, but found ${equity}`);
@@ -156,6 +157,17 @@ contract("HEOSale", (accounts) => {
                 `Unexpected exception: ${err}`);
         }
 
+        //try investing before being approved
+        try {
+            await iSale.sell(web3.utils.toWei("400000"), {from: investor1});
+            assert.fail("Should not be able to sell less than $50K worth of HEO");
+        } catch (err) {
+            assert.equal(err.reason, "HEOSale: address is not approved to invest",
+                `Unexpected exception: ${err}`);
+        }
+
+        //approve the investor
+        await iSale.approveInvestor(investor1, {from: treasurer});
         //invest $400K
         await iSale.sell(web3.utils.toWei("400000"), {from: investor1});
 
@@ -171,6 +183,7 @@ contract("HEOSale", (accounts) => {
         let unsold = await iSale.unsoldBalance.call();
         assert.isTrue(new BN("0").eq(new BN(unsold)), `Expecting unsold balance to be 0, but found ${unsold}`);
 
+        await iSale.approveInvestor(investor2, {from: treasurer});
         await iTestCoin.approve(iSale.address, web3.utils.toWei("400000"), {from: investor2});
         try {
             await iSale.sell(web3.utils.toWei("51000"), {from: investor2});
@@ -317,7 +330,8 @@ contract("HEOSale", (accounts) => {
         await iPriceOracle.setPrice(iTestCoin.address, 1, 10);
         await iSale.setAcceptedToken(iTestCoin.address, {from: treasurer});
         await iSale.setMinimum(web3.utils.toWei("10000"), {from: treasurer});
-
+        await iSale.approveInvestor(investor1, {from: treasurer});
+        await iSale.approveInvestor(investor2, {from: treasurer});
         var equity = await iSale.calculateEquity(web3.utils.toWei("300000"), iTestCoin.address);
         assert.isTrue(new BN(web3.utils.toWei("3000000")).eq(new BN(equity)),
             `Expected equity should be ${web3.utils.toWei("3000000")}, but found ${equity}`);
