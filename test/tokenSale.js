@@ -14,6 +14,7 @@ const KEY_PLATFORM_TOKEN_ADDRESS = 5;
 const KEY_PRICE_ORACLE = 4;
 const KEY_TREASURER = 6;
 
+var platformTokenAddress;
 var founder1, founder2, founder3, investor1, investor2, treasurer;
 var iTestCoin, iToken, iPriceOracle, iSale, iHEOParams, iDAO, iStaking;
 contract("HEOSale", (accounts) => {
@@ -93,7 +94,7 @@ contract("HEOSale", (accounts) => {
         await iDAO.vote(proposalId, 1, ONE_COIN, {from: founder3});
         await iDAO.executeProposal(proposalId, {from: founder2});
 
-        //create an sale contract
+        //create a sale contract
         iSale = await HEOSale.new(iDAO.address);
 
         //transfer a budget of 8M HEO to the sale contract
