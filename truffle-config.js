@@ -3,7 +3,7 @@ const fs = require('fs');
 const mnemonic = fs.readFileSync(".secret_testnet").toString().trim();
 //const mnemonic = fs.readFileSync(".secret_mainnet").toString().trim();
 module.exports = {
-  // Uncommenting the defaults below 
+  // Uncommenting the defaults below
   // provides for an easier quick-start with Ganache.
   // You can also follow this format for other networks;
   // see <http://truffleframework.com/docs/advanced/configuration>
@@ -39,8 +39,7 @@ module.exports = {
         ganache:{
             host:"127.0.0.1",
             port:7545,
-            network_id:"5777",
-            gas: 9721975000
+            network_id:"5777"
         },
         develop: {
             port: 8545,
