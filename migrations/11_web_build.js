@@ -6,7 +6,6 @@ const HEOCampaignFactory = artifacts.require("HEOCampaignFactory");
 const HEOCampaignRegistry = artifacts.require("HEOCampaignRegistry");
 const HEOPriceOracle = artifacts.require("HEOPriceOracle");
 const HEORewardFarm = artifacts.require("HEORewardFarm");
-const HEOSale = artifacts.require("HEOSale");
 
 const fs = require('fs');
 module.exports = async function(deployer, network, accounts) {
@@ -27,8 +26,8 @@ module.exports = async function(deployer, network, accounts) {
         _writeFile("HEOCampaignFactory", false, instance, network);
 
         //HEOParameters
-        instance = await HEOParameters.deployed();
-        _writeFile("HEOParameters", false, instance, network);
+        const iHEOParams = await HEOParameters.deployed();
+        _writeFile("HEOParameters", false, iHEOParams, network);
 
         //HEOCampaignRegistry
         instance = await HEOCampaignRegistry.deployed();
@@ -57,14 +56,9 @@ module.exports = async function(deployer, network, accounts) {
 
         //HEOToken
         const KEY_PLATFORM_TOKEN_ADDRESS = 5;
-        const iHEOParams = await HEOParameters.deployed(deployed);
         const platformTokenAddress = await iHEOParams.contractAddress.call(KEY_PLATFORM_TOKEN_ADDRESS);
         instance = await HEOToken.at(platformTokenAddress);
         _writeFile("HEOToken", false, instance, network);
-
-        //HEOSale
-        instance = await HEOSale.deployed();
-        _writeFile("HEOSale", false, instance, network);
     }
 
 }
