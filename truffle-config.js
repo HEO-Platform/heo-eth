@@ -1,7 +1,9 @@
 const HDWalletProvider = require('truffle-hdwallet-provider');
 const fs = require('fs');
-const mnemonic = fs.readFileSync(".secret_testnet").toString().trim();
+//const mnemonic = fs.readFileSync(".secret_testnet").toString().trim();
 //const mnemonic = fs.readFileSync(".secret_mainnet").toString().trim();
+//const mnemonic = 'exotic vapor family impact jaguar promote usual liar describe able stay finish';
+const mnemonic = 'game cute resource analyst endless trust glide foam cube slot grocery nut';
 module.exports = {
   // Uncommenting the defaults below
   // provides for an easier quick-start with Ganache.
@@ -39,7 +41,7 @@ module.exports = {
         ganache:{
             host:"127.0.0.1",
             port:7545,
-            network_id:"5777"
+            network_id:"1337"
         },
         develop: {
             port: 8545,

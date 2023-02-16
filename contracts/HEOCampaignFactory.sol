@@ -25,8 +25,7 @@ contract HEOCampaignFactory is IHEOCampaignFactory, Ownable, ReentrancyGuard {
         address indexed campaignAddress,
         address indexed owner,
         address indexed beneficiary,
-        uint256 maxAmount,
-        address token
+        uint256 maxAmount
     );
 
     constructor (HEODAO dao) public {
@@ -38,30 +37,14 @@ contract HEOCampaignFactory is IHEOCampaignFactory, Ownable, ReentrancyGuard {
      @dev creates a campaign, registers it in campaign registry and transfers ownership of HEOCampaign instance
      to the caller.
     */
-    function createCampaign(uint256 maxAmount, address token, address payable beneficiary, string memory metaData) external override nonReentrant {
-        HEOCampaign campaign = new HEOCampaign(maxAmount, beneficiary, token, _dao, 0, 0, 0, 0, 0, address(0), metaData);
+    function createCampaign(uint256 maxAmount, address payable beneficiary, string memory metaData) external override nonReentrant {
+        HEOCampaign campaign = new HEOCampaign(maxAmount, beneficiary, _dao, 0, 0, 0, 0, 0, address(0), metaData);
         IHEOCampaignRegistry registry = IHEOCampaignRegistry(_dao.heoParams().contractAddress(HEOLib.CAMPAIGN_REGISTRY));
         campaign.transferOwnership(_msgSender());
         registry.registerCampaign(address(campaign));
-        emit CampaignDeployed(address(campaign), address(_msgSender()), beneficiary, maxAmount, token);
+        emit CampaignDeployed(address(campaign), address(_msgSender()), beneficiary, maxAmount);
     }
-
-    function createRewardCampaign(uint256 maxAmount, address token, address payable beneficiary, string memory metaData) external override nonReentrant {
-        require(maxAmount > 0, "HEOCampaignFactory: maxAmount has to be greater than zero");
-        address heoAddr = _dao.heoParams().contractAddress(HEOLib.PLATFORM_TOKEN_ADDRESS);
-        (uint256 heoPrice, uint256 heoPriceDecimals) = IHEOPriceOracle(_dao.heoParams().contractAddress(HEOLib.PRICE_ORACLE)).getPrice(token);
-        // Example 1: 1 HEO = 1USDC, maxAmount = 100 USDC, fee = 5% = 5 USDC = 2.5HEO
-        // Example 2: 1 HEO = 0.01ETH, maxAmount = 10 ETH, fee = 2.5% = 0.25 ETH = 25HEO
-        uint256 heoLocked = _dao.heoParams().calculateFee(maxAmount).div(heoPrice).mul(heoPriceDecimals);
-        HEOCampaign campaign = new HEOCampaign(maxAmount, beneficiary, token, _dao,  heoLocked, heoPrice,
-            heoPriceDecimals, _dao.heoParams().fundraisingFee(), _dao.heoParams().fundraisingFeeDecimals(), heoAddr, metaData);
-        ERC20(heoAddr).safeTransferFrom(_msgSender(), address(campaign), heoLocked);
-
-        IHEOCampaignRegistry registry = IHEOCampaignRegistry(_dao.heoParams().contractAddress(HEOLib.CAMPAIGN_REGISTRY));
-        campaign.transferOwnership(_msgSender());
-        registry.registerCampaign(address(campaign));
-        emit CampaignDeployed(address(campaign), address(_msgSender()), beneficiary, maxAmount, token);
-    }
+    
     /*
     * Override default Ownable::renounceOwnership to make sure
     * this contract does not get orphaned.
