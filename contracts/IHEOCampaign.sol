@@ -8,10 +8,10 @@ interface IHEOCampaign {
     function beneficiary() external view returns (address);
     function heoLocked() external view returns (uint256);
     function raisedAmount() external view returns (uint256);
-    function currency() external view returns (address);
     function close() external;
     function updateMaxAmount(uint256 newMaxAmount) external;
     function metaData() external view returns (string memory);
     function updateMetaData(string memory newMetaData) external;
     function update(uint256 newMaxAmount, string memory newMetaData) external;
 }
+

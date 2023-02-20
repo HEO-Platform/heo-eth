@@ -3,9 +3,6 @@
 pragma solidity >=0.6.1;
 
 interface IHEOCampaignFactory {
-    function createCampaign(uint256 maxAmount, address token,
-        address payable beneficiary, string memory metaData) external;
-
-    function createRewardCampaign(uint256 maxAmount, address token,
+    function createCampaign(uint256 maxAmount,
         address payable beneficiary, string memory metaData) external;
 }

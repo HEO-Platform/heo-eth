@@ -25,26 +25,17 @@ contract HEOCampaign is IHEOCampaign, Ownable, ReentrancyGuard {
     uint256 private _heoPriceDecimals; //decimals in the price of HEO
     uint256 private _fee;
     uint256 private _feeDecimals;
-    bool private _isNative;
     bool private _isActive;
     address private _currency; //Address of the token accepted by this campaign
     HEODAO private _dao;
     address private _heoAddr;
     string private _metaData;
+    event Approve(address owner, address spender, uint256 value);
 
-    constructor (uint256 maxAmount, address payable beneficiary, address currency, HEODAO dao,
+    constructor (uint256 maxAmount, address payable beneficiary,HEODAO dao,
         uint256 heoLocked, uint256 heoPrice, uint256 heoPriceDecimals, uint256 fee, uint256 feeDecimals,
         address heoAddr, string memory metaData) public {
         require(beneficiary != address(0), "HEOCampaign: beneficiary cannot be a zero address");
-        if(currency == address(0)) {
-            if(dao.heoParams().intParameterValue(HEOLib.ENABLE_FUNDRAISER_WHITELIST) > 0) {
-                require(dao.heoParams().addrParameterValue(HEOLib.FUNDRAISER_WHITE_LIST, beneficiary) > 0,
-                    "HEOCampaign: account must be white listed to raise ETH");
-            }
-            _isNative = true;
-        } else {
-            require(dao.heoParams().isTokenAccepted(currency) > 0, "HEOCampaign: currency is not accepted as donation");
-        }
         if(heoLocked > 0) {
             require(maxAmount > 0, "HEOCampaign: maxAmount has to be greater than zero");
             //check White List
@@ -70,7 +61,6 @@ contract HEOCampaign is IHEOCampaign, Ownable, ReentrancyGuard {
         _maxAmount = maxAmount;
         _beneficiary = beneficiary;
         _dao = dao;
-        _currency = currency;
         _isActive = true;
         _metaData = metaData;
     }
@@ -81,52 +71,33 @@ contract HEOCampaign is IHEOCampaign, Ownable, ReentrancyGuard {
         require(_msgSender() != owner(), "HEOCampaign: cannot donate to your own camapaign");
         _;
     }
-
+    
+    function donateToBeneficiary(address inCurrency) public payable {
+        ERC20 coinInstans = ERC20(inCurrency);
+        require(((_msgSender() == owner())||(_msgSender() == _beneficiary)), "HEOCampaign: only owners or benificars can withdraw donations from the company");
+        uint256 balance = coinInstans.balanceOf(address(this));
+        require(balance > 0, "Campaign balance less than or equal to zero");
+        uint256 heoFee;
+        if(_heoLocked > 0) heoFee = _calculateFee(balance).div(_heoPrice).mul(_heoPriceDecimals);
+        else heoFee = _dao.heoParams().calculateFee(balance);
+        uint256 toBeneficiary = balance.sub(heoFee);
+        coinInstans.safeTransfer(address(_dao), heoFee);
+        coinInstans.safeTransfer(this.beneficiary(), toBeneficiary);
+    }
+    
     /**
     * Donate to the campaign in native tokens (ETH).
     */
     function donateNative() public payable _canDonate {
-        require(_isNative, "HEOCampaign: this campaign does not accept ETH");
         require(msg.value > 0, "HEOCampaign: must send non-zero amount of ETH");
         if(_heoLocked > 0) {
             uint256 raisedFunds = _raisedFunds.add(msg.value);
-            require(raisedFunds <= _maxAmount,
-                "HEOCampaign: this contribution will exceed maximum allowed for this campaign");
-            IHEORewardFarm(_dao.heoParams().contractAddress(HEOLib.REWARD_FARM)).addDonation(_msgSender(), msg.value, address(0));
-            uint256 heoFee = _calculateFee(msg.value).div(_heoPrice).mul(_heoPriceDecimals);
-            ERC20(_heoAddr).safeTransfer(address(_dao), heoFee);
-            _beneficiary.transfer(msg.value);
+            require(raisedFunds <= _maxAmount,"HEOCampaign: this contribution will exceed maximum allowed for this campaign");
+            address(this).transfer(msg.value);
             _raisedFunds = raisedFunds;
         } else {
-            //take the fundraising fee
-            uint256 absFee = _dao.heoParams().calculateFee(msg.value);
-            uint256 toBeneficiary = msg.value.sub(absFee);
-            address(_dao).transfer(absFee);
-            _beneficiary.transfer(toBeneficiary);
-            _raisedFunds = _raisedFunds.add(toBeneficiary);
-        }
-    }
-
-    function donateERC20(uint256 amount) external _canDonate nonReentrant {
-        require(!_isNative, "HEOCampaign: this campaign does not accept ERC-20 donations");
-        require(amount > 0, "HEOCampaign: must send non-zero amount of ERC-20 tokens");
-        ERC20 paymentToken = ERC20(_currency);
-        if(_heoLocked > 0) {
-            uint256 raisedFunds = _raisedFunds.add(amount);
-            require(raisedFunds <= _maxAmount,
-                "HEOCampaign: this contribution will exceed maximum allowed for this campaign");
-            IHEORewardFarm(_dao.heoParams().contractAddress(HEOLib.REWARD_FARM)).addDonation(_msgSender(), amount, _currency);
-            uint256 heoFee = _calculateFee(amount).div(_heoPrice).mul(_heoPriceDecimals);
-            ERC20(_heoAddr).safeTransfer(address(_dao), heoFee);
-            paymentToken.safeTransferFrom(_msgSender(), address(_beneficiary), amount);
-            _raisedFunds = raisedFunds;
-        } else {
-            //take the fundraising fee
-            uint256 absFee = _dao.heoParams().calculateFee(amount);
-            uint256 toBeneficiary = amount.sub(absFee);
-            paymentToken.safeTransferFrom(_msgSender(), address(_dao), absFee);
-            paymentToken.safeTransferFrom(_msgSender(), address(_beneficiary), toBeneficiary);
-            _raisedFunds = _raisedFunds.add(toBeneficiary);
+            address(this).transfer(msg.value);
+            _raisedFunds = _raisedFunds.add(msg.value);
         }
     }
 
@@ -138,23 +109,12 @@ contract HEOCampaign is IHEOCampaign, Ownable, ReentrancyGuard {
         donateNative();
     }
 
-    //getters
-
-    /**
-    * Address of the token accepted by this campaign. Zero address is used for native
-    * coin of the underlying blockchain.
-    */
-    function currency() external view override returns (address) {
-        return _currency;
-    }
-
-    /**
+   /**
     * How many units of target currency can be raised by this campaign.
     */
     function maxAmount() external view override returns (uint256) {
         return _maxAmount;
     }
-
 
     /**
     * How many units of target currency have been raised by this campaign.
