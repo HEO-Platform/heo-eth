@@ -18,14 +18,14 @@ module.exports = async function(deployer, network, accounts) {
         }
 
         //HEODao
-        let instance = await HEODAO.deployed();
+        let instance = await HEODAO.at("0x125a5d1ad1bEE45D9A701D751495D90D8a22d1f1");
         _writeFile("HEODAO", false, instance, network);
 
         //HEOCampaignFactory
-        instance = await HEOCampaignFactory.deployed();
+        instance = await HEOCampaignFactory.at("0x449f0CbE982f81FEc78800289362527fFc309cfb");
         _writeFile("HEOCampaignFactory", false, instance, network);
 
-        //HEOParameters
+        /*//HEOParameters
         const iHEOParams = await HEOParameters.deployed();
         _writeFile("HEOParameters", false, iHEOParams, network);
 
@@ -58,7 +58,7 @@ module.exports = async function(deployer, network, accounts) {
         const KEY_PLATFORM_TOKEN_ADDRESS = 5;
         const platformTokenAddress = await iHEOParams.contractAddress.call(KEY_PLATFORM_TOKEN_ADDRESS);
         instance = await HEOToken.at(platformTokenAddress);
-        _writeFile("HEOToken", false, instance, network);
+        _writeFile("HEOToken", false, instance, network);*/
     }
 
 }

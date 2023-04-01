@@ -20,20 +20,20 @@ module.exports = async function(deployer, network, accounts) {
         const KEY_REWARD_FARM = 2;
 
         //deploy the DAO
-        const iHEODao = await HEODAO.deployed();
+        const iHEODao = await HEODAO.at("TXSSdhGUh4iJrpz8SfgirhF5v4UDgxG5E7");
 
         //instantiate main contracts
-        const iRewardFarm = await HEORewardFarm.deployed();
-        const iRegistry = await HEOCampaignRegistry.deployed();
-        const iCampaignFactory = await HEOCampaignFactory.deployed();
-        const iStaking = await HEOStaking.deployed();
-        const iHEOParams = await HEOParameters.deployed();
+        //const iRewardFarm = await HEORewardFarm.deployed();
+        //const iRegistry = await HEOCampaignRegistry.deployed();
+        const iCampaignFactory = await HEOCampaignFactory.at("TVRDVuFxuFY2gXCDxUrBDLU1rvcgfiBkBn");
+        const iStaking = await HEOStaking.at("TWoVz2wsjbdFmx7zMUWh3ZY4UzbVfT4fkr");
+        const iHEOParams = await HEOParameters.at("TL8cQrCc6GTf5tmrxU51kNXbH9m2w1MFir");
         const iPriceOracle = await HEOPriceOracle.deployed();
         var proposalId;
         var events;
         var totalGasUsed = 0;
         //register initial 3 voters
-        const platformTokenAddress = await iHEOParams.contractAddress.call(KEY_PLATFORM_TOKEN_ADDRESS);
+        /*const platformTokenAddress = await iHEOParams.contractAddress.call(KEY_PLATFORM_TOKEN_ADDRESS); //TYB3363nUsJ9ruQ2rPfos6hRZM21PQEt9c
         console.log(`HEO coin address: ${platformTokenAddress}`);
         const iToken = await HEOToken.at(platformTokenAddress);
         try {
@@ -51,11 +51,12 @@ module.exports = async function(deployer, network, accounts) {
         } catch (err) {
             console.log("likely rerunning migration. Ignoring error.")
             console.log(err);
-        }
+        }*/
 
         //set campaign factory address by vote
         let txReceipt = await iHEODao.proposeVote(3, 0, KEY_CAMPAIGN_FACTORY, [iCampaignFactory.address], [1], 259201, 51,
-            {from: accounts[0]});
+            {from: accounts[0]}); //https://shasta.tronscan.org/#/transaction/a8583ab0cbd1a7463572bc36d2dab24302d4d875ab1a6d6cc9863f0979f66823
+        //proposal ID 0x34f2af8d4778aa30a707042b916c265b5320e3567b516409217fff7472573c6c
         console.log("Proposed vote to set campaign factory. Waiting for events");
         console.log(`Proposed vote cost: ${txReceipt.receipt.gasUsed}`);
         totalGasUsed += txReceipt.receipt.gasUsed;
@@ -88,7 +89,7 @@ module.exports = async function(deployer, network, accounts) {
         totalGasUsed += txReceipt.receipt.gasUsed;
 
         //set price oracle by vote
-        txReceipt = await iHEODao.proposeVote(3, 0, KEY_PRICE_ORACLE, [iPriceOracle.address], [1], 259201, 51,
+       /* txReceipt = await iHEODao.proposeVote(3, 0, KEY_PRICE_ORACLE, [iPriceOracle.address], [1], 259201, 51,
             {from: accounts[0]});
         console.log("Proposed vote to set price oracle. Waiting for events");
         console.log(`Propose cost: ${txReceipt.receipt.gasUsed}`);
@@ -189,6 +190,6 @@ module.exports = async function(deployer, network, accounts) {
         console.log(`Execute cost: ${txReceipt.receipt.gasUsed}`);
         totalGasUsed += txReceipt.receipt.gasUsed;
         console.log(txReceipt);
-        console.log(`Total gas cost: ${totalGasUsed}`);
+        console.log(`Total gas cost: ${totalGasUsed}`);*/
     }
 }
