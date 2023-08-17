@@ -1,3 +1,7 @@
+
+const ganache = require('ganache');
+const Web3 = require('web3');
+const [web3, provider] = require('tronbox-web3')(new Web3(Web3.givenProvider), ganache.provider());
 const HEOCampaign = artifacts.require("HEOCampaign");
 const HEOCampaignRegistry = artifacts.require("HEOCampaignRegistry");
 const HEODAO = artifacts.require("HEODAO");
@@ -282,3 +286,4 @@ contract("HEOCampaignRegistry", (accounts) => {
 
 
 });
+        

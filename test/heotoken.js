@@ -1,3 +1,7 @@
+
+const ganache = require('ganache');
+const Web3 = require('web3');
+const [web3, provider] = require('tronbox-web3')(new Web3(Web3.givenProvider), ganache.provider());
 const HEOToken = artifacts.require("HEOToken");
 const BN = web3.utils.BN;
 contract("HEOToken", (accounts) => {
@@ -17,3 +21,5 @@ contract("HEOToken", (accounts) => {
     assert.equal(owner, accounts[0], "accounts[0] should be the owner");
   });
 });
+
+        

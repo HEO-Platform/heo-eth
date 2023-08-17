@@ -1,3 +1,7 @@
+
+const ganache = require('ganache');
+const Web3 = require('web3');
+const [web3, provider] = require('tronbox-web3')(new Web3(Web3.givenProvider), ganache.provider());
 const HEOToken = artifacts.require("HEOToken");
 const HEOBudget = artifacts.require("HEOBudget");
 const HEODAO = artifacts.require("HEODAO");
@@ -907,3 +911,5 @@ contract("HEORewardFarm", (accounts) => {
             `Donor's HEO balance should have increased from ${before} by ${diff}, but found ${after}`);
     });
 });
+
+        

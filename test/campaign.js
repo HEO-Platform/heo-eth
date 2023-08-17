@@ -1,3 +1,7 @@
+
+const ganache = require('ganache');
+const Web3 = require('web3');
+const [web3, provider] = require('tronbox-web3')(new Web3(Web3.givenProvider), ganache.provider());
 const HEOToken = artifacts.require("HEOToken");
 const HEOCampaign = artifacts.require("HEOCampaign");
 const HEODAO = artifacts.require("HEODAO");
@@ -739,3 +743,4 @@ advance = async (chainTimeBefore) => {
 }
 //100000000000000000
 //1134439500000000000
+        

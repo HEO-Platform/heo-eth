@@ -71,7 +71,7 @@ contract HEOCampaign is IHEOCampaign, Ownable, ReentrancyGuard {
         require(_msgSender() != owner(), "HEOCampaign: cannot donate to your own camapaign");
         _;
     }
-    
+
     function donateToBeneficiary(address inCurrency) public payable {
         ERC20 coinInstans = ERC20(inCurrency);
         require(((_msgSender() == owner())||(_msgSender() == _beneficiary)), "HEOCampaign: only owners or benificars can withdraw donations from the company");
@@ -84,7 +84,7 @@ contract HEOCampaign is IHEOCampaign, Ownable, ReentrancyGuard {
         coinInstans.safeTransfer(address(_dao), heoFee);
         coinInstans.safeTransfer(this.beneficiary(), toBeneficiary);
     }
-    
+
     /**
     * Donate to the campaign in native tokens (ETH).
     */
@@ -219,3 +219,4 @@ contract HEOCampaign is IHEOCampaign, Ownable, ReentrancyGuard {
         revert("cannot renounce ownership.");
     }
 }
+
