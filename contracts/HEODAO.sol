@@ -65,7 +65,7 @@ contract HEODAO is Ownable, ReentrancyGuard {
     @dev initial supply should be 100000000000000000000000000
     */
     function deployPlatformToken(uint256 _supply, string calldata _name, string calldata _symbol) external onlyOwner {
-        require(_heoParams.contractAddress(HEOLib.PLATFORM_TOKEN_ADDRESS) == address(0), "Platform token is already deployed");
+        require(_heoParams.contractAddress(HEOLib.PLATFORM_TOKEN_ADDRESS) == address(0));
         HEOToken token = new HEOToken(_supply, _name, _symbol);
         _heoParams.setContractAddress(HEOLib.PLATFORM_TOKEN_ADDRESS, address(token));
         if(_heoParams.addrParameterLength(HEOLib.VOTING_TOKEN_ADDRESS) == 0) {
@@ -112,7 +112,7 @@ contract HEODAO is Ownable, ReentrancyGuard {
     );
 
     modifier onlyVoter() {
-        require(owner() == _msgSender() || _heoStaking.isVoter(_msgSender()), "Caller is not a voter");
+        require(owner() == _msgSender() || _heoStaking.isVoter(_msgSender()));
         _;
     }
 
@@ -136,7 +136,7 @@ contract HEODAO is Ownable, ReentrancyGuard {
     }
 
     modifier isVotingToken(address _token) {
-        require(_heoParams.addrParameterValue(HEOLib.VOTING_TOKEN_ADDRESS, _token) > 0, "token not allowed for staking");
+        require(_heoParams.addrParameterValue(HEOLib.VOTING_TOKEN_ADDRESS, _token) > 0);
         _;
     }
     /**
@@ -163,8 +163,7 @@ contract HEODAO is Ownable, ReentrancyGuard {
         uint256 remainingAmount = _heoStaking.voterStake(_voter).sub(_amount);
         //check that this voter is not withdrawing a stake locked in active vote
         for(uint256 i = 0; i < _activeProposals.length; i++) {
-            require(_proposals[_activeProposals[i]].stakes[_voter] <= remainingAmount,
-                "cannot reduce stake below amount locked in an active vote");
+            require(_proposals[_activeProposals[i]].stakes[_voter] <= remainingAmount);
         }
         _heoStaking.reduceStake(_amount, _token, _voter);
     }
@@ -187,23 +186,23 @@ contract HEODAO is Ownable, ReentrancyGuard {
     */
     function proposeVote(HEOLib.ProposalType _propType, HEOLib.ProposedOperation _opType, uint256 _key,
         address[] calldata _addrs, uint256[] calldata _values, uint256 _duration, uint256 _percentToPass) external
-        onlyVoter {
+    onlyVoter {
         if(_propType == HEOLib.ProposalType.INTVAL && _key <= HEOLib.ENABLE_BUDGET_VOTER_WHITELIST) {
-            require(owner() == _msgSender(), "only owner can modify white lists");
+            require(owner() == _msgSender());
         }
         if(_propType == HEOLib.ProposalType.ADDRVAL && _key <= HEOLib.BUDGET_WHITE_LIST) {
-            require(owner() == _msgSender(), "only owner can modify white lists");
+            require(owner() == _msgSender());
         }
-        require(allowedToVote(_msgSender(), _propType), "caller is not in the voter whitelist");
+        require(allowedToVote(_msgSender(), _propType));
         if(_heoParams.intParameterValue(HEOLib.MIN_VOTE_DURATION) > 0) {
-            require(_duration >= _heoParams.intParameterValue(HEOLib.MIN_VOTE_DURATION), "_duration is too short");
+            require(_duration >= _heoParams.intParameterValue(HEOLib.MIN_VOTE_DURATION));
         }
         if(_heoParams.intParameterValue(HEOLib.MAX_VOTE_DURATION) > 0) {
-            require(_duration <= _heoParams.intParameterValue(HEOLib.MAX_VOTE_DURATION), "_duration is too long");
+            require(_duration <= _heoParams.intParameterValue(HEOLib.MAX_VOTE_DURATION));
         }
-        require(_percentToPass >= HEOLib.MIN_PASSING_VOTE, "_percentToPass is too low");
+        require(_percentToPass >= HEOLib.MIN_PASSING_VOTE);
         if(_key == HEOLib.PLATFORM_TOKEN_ADDRESS && _propType == HEOLib.ProposalType.CONTRACT) {
-            revert("Cannot change platform token address");
+            revert();
         }
         HEOLib.Proposal memory proposal;
         proposal.propType = _propType;
@@ -217,7 +216,7 @@ contract HEODAO is Ownable, ReentrancyGuard {
         bytes32 proposalId = HEOLib._generateProposalId(proposal);
         //Check that identical proposal does not exist
         if(_proposalStartTimes[proposalId] > 0) {
-            revert("the same proposal already exists in this block");
+            revert();
         }
 
         _proposals[proposalId] = proposal;
@@ -236,12 +235,12 @@ contract HEODAO is Ownable, ReentrancyGuard {
     @param _weight - how much of staked amount to use for this vote
     */
     function vote(bytes32 _proposalId, uint256 _vote, uint256 _weight) external onlyVoter {
-        require(_proposalStatus[_proposalId] == HEOLib.ProposalStatus.OPEN, "proposal is not open");
-        require(_heoStaking.voterStake(_msgSender()) >= _weight, "_weight exceeds staked amount");
+        require(_proposalStatus[_proposalId] == HEOLib.ProposalStatus.OPEN);
+        require(_heoStaking.voterStake(_msgSender()) >= _weight);
         HEOLib.Proposal storage proposal = _proposals[_proposalId];
         require((block.timestamp.sub(_proposalStartTimes[_proposalId])) <=  _proposalDurations[_proposalId],
             "proposal has expired");
-        require(allowedToVote(_msgSender(), proposal.propType), "caller is not in the voter whitelist");
+        require(allowedToVote(_msgSender(), proposal.propType));
         require(_vote <= proposal.values.length, "vote out of range");
         address voter = _msgSender();
         if(proposal.stakes[voter] > 0) {
@@ -263,12 +262,11 @@ contract HEODAO is Ownable, ReentrancyGuard {
     @dev A proposal can be executed once it's duration time passes or everyone has voted
     */
     function executeProposal(bytes32 _proposalId) external onlyVoter nonReentrant {
-        require(_proposalStatus[_proposalId] == HEOLib.ProposalStatus.OPEN, "proposal is not open");
+        require(_proposalStatus[_proposalId] == HEOLib.ProposalStatus.OPEN);
         HEOLib.Proposal storage proposal = _proposals[_proposalId];
-        require(allowedToVote(_msgSender(), proposal.propType), "caller is not whitelisted");
+        require(allowedToVote(_msgSender(), proposal.propType));
         if(proposal.totalVoters < _heoStaking.numVoters()) {
-            require((block.timestamp.sub(_proposalStartTimes[_proposalId])) >  _proposalDurations[_proposalId],
-                "proposal has more time");
+            require((block.timestamp.sub(_proposalStartTimes[_proposalId])) >  _proposalDurations[_proposalId]);
         }
         uint256 winnerOption;
         uint256 winnerWeight;
@@ -380,7 +378,7 @@ contract HEODAO is Ownable, ReentrancyGuard {
     }
 
     //Public views
-     function stakedForProposal(bytes32 _proposalId, address _voter) public view returns(uint256) {
+    function stakedForProposal(bytes32 _proposalId, address _voter) public view returns(uint256) {
         return _proposals[_proposalId].stakes[_voter];
     }
     function activeProposals() public view returns(bytes32[] memory proposals) {
