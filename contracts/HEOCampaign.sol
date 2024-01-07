@@ -29,32 +29,9 @@ contract HEOCampaign is IHEOCampaign, Ownable, ReentrancyGuard {
     HEODAO private _dao;
     address private _heoAddr;
     string private _metaData;
-    event Approve(address owner, address spender, uint256 value);
 
-    constructor (uint256 maxAmount, address payable beneficiary,HEODAO dao,
-        uint256 heoLocked, uint256 heoPrice, uint256 heoPriceDecimals, uint256 fee, uint256 feeDecimals,
-        address heoAddr, string memory metaData) public {
+    constructor (uint256 maxAmount, address payable beneficiary, HEODAO dao, string memory metaData) public {
         require(beneficiary != address(0));
-        if(heoLocked > 0) {
-            require(maxAmount > 0);
-            //check White List
-            if(dao.heoParams().intParameterValue(HEOLib.ENABLE_FUNDRAISER_WHITELIST) > 0) {
-                if(dao.heoParams().addrParameterValue(HEOLib.FUNDRAISER_WHITE_LIST, beneficiary) == 0) {
-                    require(maxAmount <= dao.heoParams().intParameterValue(HEOLib.ANON_CAMPAIGN_LIMIT));
-                }
-            }
-            _heoAddr = heoAddr;
-            _heoPrice = heoPrice;
-            _heoPriceDecimals = heoPriceDecimals;
-            _heoLocked = heoLocked;
-            _fee = fee;
-            _feeDecimals = feeDecimals;
-        } else {
-            //check White List
-            if(dao.heoParams().intParameterValue(HEOLib.ENABLE_FUNDRAISER_WHITELIST) > 0) {
-                require(dao.heoParams().addrParameterValue(HEOLib.FUNDRAISER_WHITE_LIST, beneficiary) > 0);
-            }
-        }
         _maxAmount = maxAmount;
         _beneficiary = beneficiary;
         _dao = dao;
@@ -75,8 +52,7 @@ contract HEOCampaign is IHEOCampaign, Ownable, ReentrancyGuard {
         uint256 balance = coinInstans.balanceOf(address(this));
         require(balance > 0);
         uint256 heoFee;
-        if(_heoLocked > 0) heoFee = _calculateFee(balance).div(_heoPrice).mul(_heoPriceDecimals);
-        else heoFee = _dao.heoParams().calculateFee(balance);
+        heoFee = _dao.heoParams().calculateFee(balance);
         uint256 toBeneficiary = balance.sub(heoFee);
         coinInstans.safeTransfer(address(_dao), heoFee);
         coinInstans.safeTransfer(this.beneficiary(), toBeneficiary);
@@ -87,15 +63,8 @@ contract HEOCampaign is IHEOCampaign, Ownable, ReentrancyGuard {
     */
     function donateNative() public payable _canDonate {
         require(msg.value > 0);
-        if(_heoLocked > 0) {
-            uint256 raisedFunds = _raisedFunds.add(msg.value);
-            require(raisedFunds <= _maxAmount);
-            address(this).transfer(msg.value);
-            _raisedFunds = raisedFunds;
-        } else {
-            address(this).transfer(msg.value);
-            _raisedFunds = _raisedFunds.add(msg.value);
-        }
+        address(this).transfer(msg.value);
+        _raisedFunds = _raisedFunds.add(msg.value);
     }
 
     function _calculateFee(uint256 amount) internal view returns(uint256) {
@@ -180,32 +149,11 @@ contract HEOCampaign is IHEOCampaign, Ownable, ReentrancyGuard {
 
     function _updateMaxAmount(uint256 newMaxAmount) private {
         require(newMaxAmount >= _raisedFunds);
-        if(_heoLocked > 0) {
-            uint256 heoRequired = _dao.heoParams().calculateFee(newMaxAmount).div(_heoPrice).mul(_heoPriceDecimals);
-            if(heoRequired > _heoLocked) {
-                //lock more HEO
-                uint256 heoDelta = heoRequired.sub(_heoLocked);
-                ERC20(_heoAddr).safeTransferFrom(_msgSender(), address(this), heoDelta);
-                _heoLocked = _heoLocked.add(heoDelta);
-            } else if(heoRequired < _heoLocked) {
-                //refund some HEO
-                uint256 heoDelta = _heoLocked.sub(heoRequired);
-                ERC20(_heoAddr).safeTransfer(_msgSender(), heoDelta);
-                _heoLocked = _heoLocked.sub(heoDelta);
-            }
-        }
         _maxAmount = newMaxAmount;
     }
 
     function close() external override onlyOwner() {
         require(_isActive);
-        //refund unspent HEO
-        if(_heoLocked > 0) {
-            uint256 balance = ERC20(_heoAddr).balanceOf(address(this));
-            if(balance > 0) {
-                ERC20(_heoAddr).safeTransfer(_msgSender(), balance);
-            }
-        }
         _isActive = false;
     }
     /*

@@ -33,7 +33,7 @@ contract HEOCampaignFactory is IHEOCampaignFactory, Ownable, ReentrancyGuard {
      to the caller.
     */
     function createCampaign(uint256 maxAmount, address payable beneficiary, string memory metaData) external override nonReentrant {
-        HEOCampaign campaign = new HEOCampaign(maxAmount, beneficiary, _dao, 0, 0, 0, 0, 0, address(0), metaData);
+        HEOCampaign campaign = new HEOCampaign(maxAmount, beneficiary, _dao, metaData);
         campaign.transferOwnership(_msgSender());
         emit CampaignDeployed(address(campaign), address(_msgSender()), beneficiary, maxAmount);
     }
