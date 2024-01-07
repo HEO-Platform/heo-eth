@@ -8,7 +8,6 @@ import "openzeppelin-solidity/contracts/access/Ownable.sol";
 import "openzeppelin-solidity/contracts/math/SafeMath.sol";
 import "openzeppelin-solidity/contracts/utils/ReentrancyGuard.sol";
 import "./IHEOCampaign.sol";
-import "./IHEORewardFarm.sol";
 import "./HEOParameters.sol";
 import "./HEODAO.sol";
 import "./HEOLib.sol";
@@ -35,14 +34,13 @@ contract HEOCampaign is IHEOCampaign, Ownable, ReentrancyGuard {
     constructor (uint256 maxAmount, address payable beneficiary,HEODAO dao,
         uint256 heoLocked, uint256 heoPrice, uint256 heoPriceDecimals, uint256 fee, uint256 feeDecimals,
         address heoAddr, string memory metaData) public {
-        require(beneficiary != address(0), "HEOCampaign: beneficiary cannot be a zero address");
+        require(beneficiary != address(0));
         if(heoLocked > 0) {
-            require(maxAmount > 0, "HEOCampaign: maxAmount has to be greater than zero");
+            require(maxAmount > 0);
             //check White List
             if(dao.heoParams().intParameterValue(HEOLib.ENABLE_FUNDRAISER_WHITELIST) > 0) {
                 if(dao.heoParams().addrParameterValue(HEOLib.FUNDRAISER_WHITE_LIST, beneficiary) == 0) {
-                    require(maxAmount <= dao.heoParams().intParameterValue(HEOLib.ANON_CAMPAIGN_LIMIT),
-                        "HEOCampaign: amount over allowed limit for non-white listed accounts");
+                    require(maxAmount <= dao.heoParams().intParameterValue(HEOLib.ANON_CAMPAIGN_LIMIT));
                 }
             }
             _heoAddr = heoAddr;
@@ -54,8 +52,7 @@ contract HEOCampaign is IHEOCampaign, Ownable, ReentrancyGuard {
         } else {
             //check White List
             if(dao.heoParams().intParameterValue(HEOLib.ENABLE_FUNDRAISER_WHITELIST) > 0) {
-                require(dao.heoParams().addrParameterValue(HEOLib.FUNDRAISER_WHITE_LIST, beneficiary) > 0,
-                "HEOCampaign: account must be white listed");
+                require(dao.heoParams().addrParameterValue(HEOLib.FUNDRAISER_WHITE_LIST, beneficiary) > 0);
             }
         }
         _maxAmount = maxAmount;
@@ -66,17 +63,17 @@ contract HEOCampaign is IHEOCampaign, Ownable, ReentrancyGuard {
     }
 
     modifier _canDonate() {
-        require(_isActive, "HEOCampaign: this campaign is no longer active");
-        require(_msgSender() != _beneficiary, "HEOCampaign: cannot donate to yourself");
-        require(_msgSender() != owner(), "HEOCampaign: cannot donate to your own camapaign");
+        require(_isActive);
+        require(_msgSender() != _beneficiary);
+        require(_msgSender() != owner());
         _;
     }
 
     function donateToBeneficiary(address inCurrency) public payable {
         ERC20 coinInstans = ERC20(inCurrency);
-        require(((_msgSender() == owner())||(_msgSender() == _beneficiary)), "HEOCampaign: only owners or benificars can withdraw donations from the company");
+        require(((_msgSender() == owner())||(_msgSender() == _beneficiary)));
         uint256 balance = coinInstans.balanceOf(address(this));
-        require(balance > 0, "Campaign balance less than or equal to zero");
+        require(balance > 0);
         uint256 heoFee;
         if(_heoLocked > 0) heoFee = _calculateFee(balance).div(_heoPrice).mul(_heoPriceDecimals);
         else heoFee = _dao.heoParams().calculateFee(balance);
@@ -89,10 +86,10 @@ contract HEOCampaign is IHEOCampaign, Ownable, ReentrancyGuard {
     * Donate to the campaign in native tokens (ETH).
     */
     function donateNative() public payable _canDonate {
-        require(msg.value > 0, "HEOCampaign: must send non-zero amount of ETH");
+        require(msg.value > 0);
         if(_heoLocked > 0) {
             uint256 raisedFunds = _raisedFunds.add(msg.value);
-            require(raisedFunds <= _maxAmount,"HEOCampaign: this contribution will exceed maximum allowed for this campaign");
+            require(raisedFunds <= _maxAmount);
             address(this).transfer(msg.value);
             _raisedFunds = raisedFunds;
         } else {
@@ -109,9 +106,9 @@ contract HEOCampaign is IHEOCampaign, Ownable, ReentrancyGuard {
         donateNative();
     }
 
-   /**
-    * How many units of target currency can be raised by this campaign.
-    */
+    /**
+     * How many units of target currency can be raised by this campaign.
+     */
     function maxAmount() external view override returns (uint256) {
         return _maxAmount;
     }
@@ -182,7 +179,7 @@ contract HEOCampaign is IHEOCampaign, Ownable, ReentrancyGuard {
     }
 
     function _updateMaxAmount(uint256 newMaxAmount) private {
-        require(newMaxAmount >= _raisedFunds, "HEOCampaign: newMaxAmount cannot be lower than amount raised");
+        require(newMaxAmount >= _raisedFunds);
         if(_heoLocked > 0) {
             uint256 heoRequired = _dao.heoParams().calculateFee(newMaxAmount).div(_heoPrice).mul(_heoPriceDecimals);
             if(heoRequired > _heoLocked) {
@@ -201,7 +198,7 @@ contract HEOCampaign is IHEOCampaign, Ownable, ReentrancyGuard {
     }
 
     function close() external override onlyOwner() {
-        require(_isActive, "HEOCampaign: this campaign is no longer active");
+        require(_isActive);
         //refund unspent HEO
         if(_heoLocked > 0) {
             uint256 balance = ERC20(_heoAddr).balanceOf(address(this));
@@ -219,4 +216,3 @@ contract HEOCampaign is IHEOCampaign, Ownable, ReentrancyGuard {
         revert("cannot renounce ownership.");
     }
 }
-
