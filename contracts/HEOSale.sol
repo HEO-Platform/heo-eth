@@ -8,7 +8,6 @@ import "openzeppelin-solidity/contracts/token/ERC20/ERC20.sol";
 import "openzeppelin-solidity/contracts/token/ERC20/SafeERC20.sol";
 import "openzeppelin-solidity/contracts/utils/ReentrancyGuard.sol";
 import "./IHEOPriceOracle.sol";
-import "./IHEOCampaign.sol";
 import "./HEODAO.sol";
 import "./HEOLib.sol";
 
