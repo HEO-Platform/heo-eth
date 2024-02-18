@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity >=0.6.1;
+pragma solidity >=0.8.20;
 
 interface IHEOStaking {
     function increaseStake(uint256 _amount, address _token, address _voter) external;

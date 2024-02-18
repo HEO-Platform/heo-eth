@@ -1,12 +1,11 @@
 // SPDX-License-Identifier: MIT
-pragma solidity >=0.6.1;
+pragma solidity >=0.8.20;
 
 import "./IHEORewardFarm.sol";
-import "openzeppelin-solidity/contracts/math/Math.sol";
-import "openzeppelin-solidity/contracts/GSN/Context.sol";
-import "openzeppelin-solidity/contracts/math/SafeMath.sol";
-import "openzeppelin-solidity/contracts/token/ERC20/ERC20.sol";
-import "openzeppelin-solidity/contracts/token/ERC20/SafeERC20.sol";
+import "@openzeppelin/contracts/utils/math/Math.sol";
+import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import "@openzeppelin/contracts/utils/Context.sol";
 import "./IHEOPriceOracle.sol";
 import "./IHEOCampaign.sol";
 import "./IHEOCampaignRegistry.sol";
@@ -14,7 +13,6 @@ import "./HEODAO.sol";
 import "./HEOLib.sol";
 
 contract HEORewardFarm is IHEORewardFarm, Context {
-    using SafeMath for uint256;
     using SafeERC20 for ERC20;
     struct Donation {
         bytes32 key;
@@ -74,28 +72,28 @@ contract HEORewardFarm is IHEORewardFarm, Context {
         donation.campaign = _msgSender();
         donation.ts = block.timestamp;
         donation.reward = reward;
-        donation.vestEndTs = block.timestamp.add(_dao.heoParams().intParameterValue(HEOLib.DONATION_VESTING_SECONDS));
+        donation.vestEndTs = block.timestamp + (_dao.heoParams().intParameterValue(HEOLib.DONATION_VESTING_SECONDS));
 
         _donations[key] = donation;
         _donationsByDonor[donor].push(key);
         _donationsByCampaign[_msgSender()].push(key);
         if(_unassignedBalance > reward) {
-            _unassignedBalance = _unassignedBalance.sub(reward);
+            _unassignedBalance = _unassignedBalance - (reward);
         } else {
             _unassignedBalance = 0;
         }
-        totalDonations = totalDonations.add(1);
+        totalDonations = totalDonations + (1);
         emit DonationReceived(_msgSender(), donor, amount);
     }
 
     function _fullReward(uint256 amount, uint256 heoPrice, uint256 priceDecimals) internal view returns(uint256) {
         uint256 donationYieldDecimals = _dao.heoParams().intParameterValue(HEOLib.DONATION_YIELD_DECIMALS);
-        return amount.mul(_currentX()).div(donationYieldDecimals).div(heoPrice).mul(priceDecimals);
+        return amount * (_currentX()) / (donationYieldDecimals) / (heoPrice) * (priceDecimals);
     }
 
     function _currentX() internal view returns(uint256) {
         uint256 donationYield = _dao.heoParams().intParameterValue(HEOLib.DONATION_YIELD);
-        return _unassignedBalance.div(donationYield);
+        return _unassignedBalance / (donationYield);
     }
 
     function fullReward(uint256 amount, uint256 heoPrice, uint256 priceDecimals) external view override returns(uint256) {
@@ -110,7 +108,7 @@ contract HEORewardFarm is IHEORewardFarm, Context {
         if(block.timestamp >= _donations[key].vestEndTs) {
             return _donations[key].reward;
         }
-        return _donations[key].reward.div(_donations[key].vestEndTs.sub(_donations[key].ts)).mul(block.timestamp - _donations[key].ts);
+        return _donations[key].reward / (_donations[key].vestEndTs - (_donations[key].ts)) * (block.timestamp - _donations[key].ts);
     }
 
     function unassignedBalance() external view returns(uint256) {
@@ -142,7 +140,7 @@ contract HEORewardFarm is IHEORewardFarm, Context {
     function claimReward(address destination, bytes32 key, uint256 amount) public {
         Donation storage donation = _donations[key];
         require(donation.donor == _msgSender(), "HEORewardFarm: caller is not the donor");
-        uint256 newClaimed = donation.claimed.add(amount);
+        uint256 newClaimed = donation.claimed + (amount);
         require(newClaimed <= vestedReward(key), "HEORewardFarm: claim exceeds vested reward");
         donation.claimed = newClaimed;
         ERC20(_dao.heoParams().contractAddress(HEOLib.PLATFORM_TOKEN_ADDRESS)).safeTransfer(destination, amount);
@@ -164,7 +162,7 @@ contract HEORewardFarm is IHEORewardFarm, Context {
         require(_token == _dao.heoParams().contractAddress(HEOLib.PLATFORM_TOKEN_ADDRESS),
         "Reward farm accepts only platform token");
         ERC20(_token).safeTransferFrom(_msgSender(), address(this), _amount);
-        _unassignedBalance = _unassignedBalance.add(_amount);
+        _unassignedBalance = _unassignedBalance + (_amount);
     }
 
     function assignTreasurer(address _treasurer) external override onlyOwner {

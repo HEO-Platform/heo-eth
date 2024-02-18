@@ -1,10 +1,9 @@
-pragma solidity >=0.6.1;
-import "openzeppelin-solidity/contracts/access/Ownable.sol";
-import "openzeppelin-solidity/contracts/math/SafeMath.sol";
+pragma solidity >=0.8.20;
+import "@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts/utils/math/Math.sol";
 import "./IHEOPriceOracle.sol";
 
 contract HEOPriceOracle is IHEOPriceOracle, Ownable {
-    using SafeMath for uint256;
 
     struct Price {
         uint256 price;
@@ -13,6 +12,9 @@ contract HEOPriceOracle is IHEOPriceOracle, Ownable {
 
     //current price of HEO in currency identified by address
     mapping (address => Price) private priceMap;
+
+    constructor() Ownable(msg.sender) public {
+    }
 
     /*
     * Sets the price of HEO in {token}s.

@@ -1,15 +1,13 @@
 // SPDX-License-Identifier: MIT
-pragma solidity >=0.6.1;
-import "openzeppelin-solidity/contracts/math/SafeMath.sol";
-import "openzeppelin-solidity/contracts/access/Ownable.sol";
+pragma solidity >=0.8.20;
+import "@openzeppelin/contracts/utils/math/Math.sol";
+import "@openzeppelin/contracts/access/Ownable.sol";
 import "./HEOLib.sol";
 
 /**
 @dev Parameter management module
 */
 contract HEOParameters is Ownable {
-    using SafeMath for uint256;
-    using SafeMath for uint8;
 
     /**
     @dev an integer parameter is a single-value parameter.
@@ -52,6 +50,9 @@ contract HEOParameters is Ownable {
 
     // This map contains addresses of contracts
     mapping(uint256 => address) _contracts;
+
+    constructor() Ownable(msg.sender) public {
+    }
 
     /**
     Methods that manage contract addresses
@@ -103,7 +104,7 @@ contract HEOParameters is Ownable {
     Public view methods
     */
     function calculateFee(uint256 amount) public view  returns(uint256) {
-        return amount.mul(_intParameters[HEOLib.FUNDRAISING_FEE].value).div(_intParameters[HEOLib.FUNDRAISING_FEE_DECIMALS].value);
+        return amount*(_intParameters[HEOLib.FUNDRAISING_FEE].value)/(_intParameters[HEOLib.FUNDRAISING_FEE_DECIMALS].value);
     }
 
     function addrParameterValue(uint256 _key, address _addr) public view returns(uint256) {

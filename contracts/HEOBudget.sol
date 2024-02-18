@@ -1,15 +1,13 @@
 // SPDX-License-Identifier: MIT
-pragma solidity >=0.6.1;
+pragma solidity ^0.8.20;
 
-import "openzeppelin-solidity/contracts/GSN/Context.sol";
-import "openzeppelin-solidity/contracts/token/ERC20/ERC20.sol";
-import "openzeppelin-solidity/contracts/token/ERC20/SafeERC20.sol";
-import "openzeppelin-solidity/contracts/math/SafeMath.sol";
+import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import "@openzeppelin/contracts/utils/math/Math.sol";
+import "@openzeppelin/contracts/utils/Context.sol";
 import "./IHEOBudget.sol";
 
 contract HEOBudget is IHEOBudget, Context {
-    using SafeMath for uint256;
-    using SafeMath for uint8;
     using SafeERC20 for ERC20;
 
     address public treasurer;
@@ -18,7 +16,7 @@ contract HEOBudget is IHEOBudget, Context {
     event OwnershipTransferred(address indexed previousOwner, address indexed newOwner);
 
     constructor (address _treasurer) public {
-        address payable msgSender = _msgSender();
+        address payable msgSender = payable(_msgSender());
         require(_treasurer != address(0), "HEOBudget: _treasurer cannot be zero address");
         require(msgSender != address(0), "HEOBudget: owner cannot be zero address");
         emit OwnershipTransferred(address(0), msgSender);

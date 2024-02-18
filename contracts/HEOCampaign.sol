@@ -1,19 +1,19 @@
 // SPDX-License-Identifier: MIT
 
-pragma solidity >=0.6.1;
+pragma solidity >=0.8.20;
 
-import "openzeppelin-solidity/contracts/token/ERC20/ERC20.sol";
-import "openzeppelin-solidity/contracts/token/ERC20/SafeERC20.sol";
-import "openzeppelin-solidity/contracts/access/Ownable.sol";
-import "openzeppelin-solidity/contracts/math/SafeMath.sol";
-import "openzeppelin-solidity/contracts/utils/ReentrancyGuard.sol";
+import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import "@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts/utils/math/Math.sol";
+import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
+import "@openzeppelin/contracts/utils/Context.sol";
 import "./IHEOCampaign.sol";
 import "./HEOParameters.sol";
 import "./HEODAO.sol";
 import "./HEOLib.sol";
 
 contract HEOCampaign is IHEOCampaign, Ownable, ReentrancyGuard {
-    using SafeMath for uint256;
     using SafeERC20 for ERC20;
 
     uint256 private _maxAmount; //campaign limit in wei/wad/tknBits of the target crypto asset
@@ -30,7 +30,7 @@ contract HEOCampaign is IHEOCampaign, Ownable, ReentrancyGuard {
     address private _heoAddr;
     string private _metaData;
 
-    constructor (uint256 maxAmount, address payable beneficiary, HEODAO dao, string memory metaData) public {
+    constructor (uint256 maxAmount, address payable beneficiary, HEODAO dao, string memory metaData) Ownable(msg.sender) public {
         require(beneficiary != address(0));
         _maxAmount = maxAmount;
         _beneficiary = beneficiary;
@@ -53,26 +53,13 @@ contract HEOCampaign is IHEOCampaign, Ownable, ReentrancyGuard {
         require(balance > 0);
         uint256 heoFee;
         heoFee = _dao.heoParams().calculateFee(balance);
-        uint256 toBeneficiary = balance.sub(heoFee);
+        uint256 toBeneficiary = balance - heoFee;
         coinInstans.safeTransfer(address(_dao), heoFee);
         coinInstans.safeTransfer(this.beneficiary(), toBeneficiary);
     }
 
-    /**
-    * Donate to the campaign in native tokens (ETH).
-    */
-    function donateNative() public payable _canDonate {
-        require(msg.value > 0);
-        address(this).transfer(msg.value);
-        _raisedFunds = _raisedFunds.add(msg.value);
-    }
-
     function _calculateFee(uint256 amount) internal view returns(uint256) {
-        return amount.mul(_fee).div(_feeDecimals);
-    }
-
-    receive() external payable {
-        donateNative();
+        return amount * (_fee) / (_feeDecimals);
     }
 
     /**

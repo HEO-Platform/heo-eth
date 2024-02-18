@@ -1,17 +1,15 @@
 // SPDX-License-Identifier: MIT
-pragma solidity >=0.6.1;
+pragma solidity >=0.8.20;
 
-import "openzeppelin-solidity/contracts/math/Math.sol";
-import "openzeppelin-solidity/contracts/GSN/Context.sol";
-import "openzeppelin-solidity/contracts/math/SafeMath.sol";
-import "openzeppelin-solidity/contracts/token/ERC20/ERC20.sol";
-import "openzeppelin-solidity/contracts/token/ERC20/SafeERC20.sol";
-import "openzeppelin-solidity/contracts/utils/ReentrancyGuard.sol";
+import "@openzeppelin/contracts/utils/math/Math.sol";
+import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
+import "@openzeppelin/contracts/utils/Context.sol";
 import "./IHEOPriceOracle.sol";
 import "./HEODAO.sol";
 
 contract HEOGrant is IHEOBudget, Context, ReentrancyGuard {
-    using SafeMath for uint256;
     using SafeERC20 for ERC20;
     struct Grant {
         bytes32 key;
@@ -72,7 +70,7 @@ contract HEOGrant is IHEOBudget, Context, ReentrancyGuard {
             return 0;
         }
         uint256 vestingStartTS = Math.max(tge, grants[key].vesting_start_ts);
-        uint256 vestingEnd = grants[key].vestingSeconds.add(vestingStartTS);
+        uint256 vestingEnd = grants[key].vestingSeconds + (vestingStartTS);
 
         //check if vesting was terminated early
         if(grants[key].termination_ts > 0 && grants[key].termination_ts < vestingEnd) {
@@ -83,7 +81,7 @@ contract HEOGrant is IHEOBudget, Context, ReentrancyGuard {
             endDate = vestingEnd;
         }
 
-        return grants[key].amount.mul(endDate.sub(vestingStartTS)).div(grants[key].vestingSeconds);
+        return grants[key].amount * (endDate - (vestingStartTS)) / (grants[key].vestingSeconds);
     }
 
     function grantAmount(bytes32 key) external view returns(uint256) {
@@ -112,21 +110,21 @@ contract HEOGrant is IHEOBudget, Context, ReentrancyGuard {
     }
 
     function remainsInGrant(bytes32 key) public view returns (uint256) {
-        return vestedAmount(key, block.timestamp).sub(grants[key].claimed);
+        return vestedAmount(key, block.timestamp) - (grants[key].claimed);
     }
 
     function claim(address destination, bytes32 key, uint256 amount) public {
         Grant storage grant = grants[key];
         require(grant.grantee == _msgSender(), "HEOGrant: caller is not the grantee");
-        uint256 unClaimed = vestedAmount(key, block.timestamp).sub(grant.claimed);
+        uint256 unClaimed = vestedAmount(key, block.timestamp) - (grant.claimed);
         require(unClaimed >= amount, "HEOGrant: claim exceeds vested equity");
         if(amount == 0) {
             //claim the remainder
             amount = unClaimed;
         }
         require(amount > 0, "HEOGrant: no vested equity to claim");
-        grant.claimed = grant.claimed.add(amount); //update claimed amount in the grant
-        tokensClaimed[grant.token] = tokensClaimed[grant.token].add(amount); //update total claimed amount
+        grant.claimed = grant.claimed + (amount); //update claimed amount in the grant
+        tokensClaimed[grant.token] = tokensClaimed[grant.token] + (amount); //update total claimed amount
         ERC20(grant.token).safeTransfer(destination, amount);
     }
 
@@ -153,15 +151,15 @@ contract HEOGrant is IHEOBudget, Context, ReentrancyGuard {
 
         grants[key] = grant;
         _grantsByGrantee[grantee].push(key);
-        tokensGranted[token] = tokensGranted[token].add(amount);
+        tokensGranted[token] = tokensGranted[token] + (amount);
     }
 
     function terminateGrant(bytes32 key, uint256 termination_ts) external onlyTreasurer {
         grants[key].termination_ts = termination_ts;
         //reduce total granted amount of tokens by how much tokens are being un-granted
         uint256 vestableAmount = vestedAmount(key, termination_ts);
-        uint256 amountToTerminate = grants[key].amount.sub(vestableAmount);
-        tokensGranted[grants[key].token] = tokensGranted[grants[key].token].sub(amountToTerminate);
+        uint256 amountToTerminate = grants[key].amount - (vestableAmount);
+        tokensGranted[grants[key].token] = tokensGranted[grants[key].token] - (amountToTerminate);
         grants[key].termination_ts = termination_ts;
     }
 

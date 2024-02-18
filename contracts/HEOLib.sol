@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity >=0.6.1;
+pragma solidity >=0.8.20;
 
 library HEOLib {
     // Indexes of reserved integer parameters
@@ -61,18 +61,18 @@ library HEOLib {
         mapping(uint256=>uint256) votes; //Maps vote options to amount of staked votes for each option
     }
 
-    function _generateProposalId(Proposal memory proposal) internal view returns(bytes32) {
+    function _generateProposalId(ProposalType propType, ProposedOperation opType, address proposer, address[] memory addrs, uint256[] memory values, uint256 key) internal view returns(bytes32) {
         //check requirements for budget proposals
-        if(proposal.propType == ProposalType.BUDGET) {
-            require(proposal.addrs[0] != address(0), "_addrs[0] cannot be empty");
-            if(proposal.opType == ProposedOperation.OP_SEND_TOKEN) {
-                require(proposal.addrs[1] != address(0), "_addrs[1] cannot be empty");
-            } else if (proposal.opType == ProposedOperation.OP_WITHDRAW_TOKEN) {
-                require(proposal.addrs[1] != address(0), "_addrs[1] cannot be empty");
+        if(propType == ProposalType.BUDGET) {
+            require(addrs[0] != address(0), "_addrs[0] cannot be empty");
+            if(opType == ProposedOperation.OP_SEND_TOKEN) {
+                require(addrs[1] != address(0), "_addrs[1] cannot be empty");
+            } else if (opType == ProposedOperation.OP_WITHDRAW_TOKEN) {
+                require(addrs[1] != address(0), "_addrs[1] cannot be empty");
             }
-            return keccak256(abi.encodePacked(proposal.addrs[0], proposal.addrs[1], proposal.proposer, proposal.values[0], block.timestamp));
+            return keccak256(abi.encodePacked(addrs[0], addrs[1], proposer, values[0], block.timestamp));
         } else {
-            return keccak256(abi.encodePacked(uint8(proposal.propType), uint8(proposal.opType), proposal.proposer, proposal.key, block.timestamp));
+            return keccak256(abi.encodePacked(uint8(propType), uint8(opType), proposer, key, block.timestamp));
         }
     }
 }

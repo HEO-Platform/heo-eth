@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: MIT
-pragma solidity >=0.6.1;
+pragma solidity >=0.8.20;
 
-import "openzeppelin-solidity/contracts/token/ERC20/ERC20.sol";
-import "openzeppelin-solidity/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+import "@openzeppelin/contracts/access/Ownable.sol";
 
 contract StableCoinForTests is ERC20, Ownable {
-    constructor(string memory symbol_) ERC20("Test coin", symbol_) public {
+    constructor(string memory symbol_) ERC20("Test coin", symbol_) Ownable(msg.sender) public {
         _mint(msg.sender, 100000000000000000000000000);
     }
 }

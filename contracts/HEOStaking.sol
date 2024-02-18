@@ -1,13 +1,12 @@
 // SPDX-License-Identifier: MIT
-pragma solidity >=0.6.1;
-import "openzeppelin-solidity/contracts/math/SafeMath.sol";
-import "openzeppelin-solidity/contracts/access/Ownable.sol";
-import "openzeppelin-solidity/contracts/token/ERC20/SafeERC20.sol";
+pragma solidity >=0.8.20;
+import "@openzeppelin/contracts/utils/math/Math.sol";
+import "@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "./IHEOStaking.sol";
 import "./HEOParameters.sol";
 
 contract HEOStaking is Ownable, IHEOStaking {
-    using SafeMath for uint256;
     using SafeERC20 for IERC20;
 
     // Maps voters to amounts staked
@@ -26,6 +25,8 @@ contract HEOStaking is Ownable, IHEOStaking {
 
     HEOParameters private _heoParams;
 
+    constructor() Ownable(msg.sender) public {
+    }
     function setParams(address params) external override onlyOwner {
         _heoParams = HEOParameters(params);
     }
@@ -36,20 +37,20 @@ contract HEOStaking is Ownable, IHEOStaking {
         require(stakingToken.transferFrom(_voter, address(this), _amount), "failed to transfer token to DAO");
         if(_voterStakes[_voter] == 0 && _amount > 0) {
             //new voter registration
-            _numVoters = _numVoters.add(1);
+            _numVoters = _numVoters + (1);
         }
         if(_stakedAmountsVT[_voter][_token] == 0 && _amount > 0) {
             // new token for this voter
             _stakedVotersByToken[_token].push(_voter);
         }
-        _voterStakes[_voter] = _voterStakes[_voter].add(_amount);
-        _stakedAmountsVT[_voter][_token] = _stakedAmountsVT[_voter][_token].add(_amount);
-        _totalAmountStaked = _totalAmountStaked.add(_amount);
+        _voterStakes[_voter] = _voterStakes[_voter] + (_amount);
+        _stakedAmountsVT[_voter][_token] = _stakedAmountsVT[_voter][_token] + (_amount);
+        _totalAmountStaked = _totalAmountStaked + (_amount);
         //this is a new token that was not staked before
         if(_tokenStakes[_token] == 0) {
             _tokens.push(_token);
         }
-        _tokenStakes[_token] = _tokenStakes[_token].add(_amount);
+        _tokenStakes[_token] = _tokenStakes[_token] + (_amount);
     }
 
     function reduceStake(uint256 _amount, address _token, address _voter) external override onlyOwner {
@@ -61,13 +62,13 @@ contract HEOStaking is Ownable, IHEOStaking {
 
         //update internal maps
         _voterStakes[_voter] = remainingAmount;
-        _stakedAmountsVT[_voter][_token] = _stakedAmountsVT[_voter][_token].sub(_amount);
-        _totalAmountStaked = _totalAmountStaked.sub(_amount);
-        _tokenStakes[_token] = _tokenStakes[_token].sub(_amount);
+        _stakedAmountsVT[_voter][_token] = _stakedAmountsVT[_voter][_token] - (_amount);
+        _totalAmountStaked = _totalAmountStaked - (_amount);
+        _tokenStakes[_token] = _tokenStakes[_token] - (_amount);
 
         //voter removed their entire stake
         if(remainingAmount == 0) {
-            _numVoters = _numVoters.sub(1);
+            _numVoters = _numVoters - (1);
             uint256 voterIndex;
             for(voterIndex = 0; voterIndex < _stakedVotersByToken[_token].length; voterIndex++) {
                 if(_stakedVotersByToken[_token][voterIndex] == _voter) {
@@ -103,7 +104,7 @@ contract HEOStaking is Ownable, IHEOStaking {
     function _reduceStake(uint256 _amount, address _token, address _voter) private returns (uint256) {
         IERC20 stakingToken = IERC20(_token);
         stakingToken.safeTransfer(_voter, _amount);
-        uint256 remainingAmount = _voterStakes[_voter].sub(_amount);
+        uint256 remainingAmount = _voterStakes[_voter] - (_amount);
         return remainingAmount;
     }
 

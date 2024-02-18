@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: MIT
-pragma solidity >=0.6.1;
+pragma solidity >=0.8.20;
 
-import "openzeppelin-solidity/contracts/token/ERC20/ERC20.sol";
-import "openzeppelin-solidity/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+import "@openzeppelin/contracts/access/Ownable.sol";
 
 contract HEOToken is ERC20, Ownable {
 	/*
@@ -10,7 +10,7 @@ contract HEOToken is ERC20, Ownable {
 	*/
 	uint256 private _maxSupply; //Maximum allowed supply of HEO tokens
 
-	constructor(uint256 supply, string memory name_, string memory symbol_) ERC20(name_, symbol_) public {
+	constructor(uint256 supply, string memory name_, string memory symbol_) ERC20(name_, symbol_) Ownable(msg.sender) public {
 		_maxSupply = supply;
 		_mint(msg.sender, _maxSupply);
 	}

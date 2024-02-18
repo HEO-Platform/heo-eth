@@ -20,9 +20,9 @@
   },
   "homepage": "https://github.com/grishick/heo-eth#readme",
   "dependencies": {
+    "@openzeppelin/contracts": "^5.0.1",
     "@truffle/hdwallet-provider": "^1.4.0",
     "ganache-time-traveler": "^1.0.15",
-    "openzeppelin-solidity": "^3.3.0",
     "shrink-string": "^3.0.9",
     "truffle-contract-size": "^2.0.1",
     "truffle-hdwallet-provider": "^1.0.17"

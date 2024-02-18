@@ -1,11 +1,12 @@
 // SPDX-License-Identifier: MIT
-pragma solidity >=0.6.1;
+pragma solidity >=0.8.20;
 
-import "openzeppelin-solidity/contracts/math/SafeMath.sol";
-import "openzeppelin-solidity/contracts/access/Ownable.sol";
-import "openzeppelin-solidity/contracts/token/ERC20/IERC20.sol";
-import "openzeppelin-solidity/contracts/token/ERC20/SafeERC20.sol";
-import "openzeppelin-solidity/contracts/utils/ReentrancyGuard.sol";
+import "@openzeppelin/contracts/utils/math/Math.sol";
+import "@openzeppelin/contracts/access/Ownable.sol";
+import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
+import "@openzeppelin/contracts/utils/Context.sol";
 
 import "./HEOToken.sol";
 import "./IHEOBudget.sol";
@@ -17,12 +18,15 @@ import "./IHEOCampaignRegistry.sol";
 import "./IHEORewardFarm.sol";
 
 contract HEODAO is Ownable, ReentrancyGuard {
-    using SafeMath for uint256;
     using SafeERC20 for HEOToken;
     using SafeERC20 for IERC20;
 
     HEOParameters private _heoParams;
     IHEOStaking private _heoStaking;
+
+    constructor() Ownable(msg.sender) public {
+
+    }
 
     function setParams(address params) external onlyOwner {
         _heoParams = HEOParameters(params);
@@ -160,7 +164,7 @@ contract HEODAO is Ownable, ReentrancyGuard {
     }
 
     function _reduceStake(uint256 _amount, address _token, address _voter) private {
-        uint256 remainingAmount = _heoStaking.voterStake(_voter).sub(_amount);
+        uint256 remainingAmount = _heoStaking.voterStake(_voter) - _amount;
         //check that this voter is not withdrawing a stake locked in active vote
         for(uint256 i = 0; i < _activeProposals.length; i++) {
             require(_proposals[_activeProposals[i]].stakes[_voter] <= remainingAmount);
@@ -204,27 +208,27 @@ contract HEODAO is Ownable, ReentrancyGuard {
         if(_key == HEOLib.PLATFORM_TOKEN_ADDRESS && _propType == HEOLib.ProposalType.CONTRACT) {
             revert();
         }
-        HEOLib.Proposal memory proposal;
-        proposal.propType = _propType;
-        proposal.opType = _opType;
-        proposal.key = _key;
-        proposal.values = _values;
-        proposal.addrs = _addrs;
-        proposal.proposer = _msgSender();
-        proposal.percentToPass = _percentToPass;
-
-        bytes32 proposalId = HEOLib._generateProposalId(proposal);
+        bytes32 proposalId = HEOLib._generateProposalId(_propType, _opType, _msgSender(), _addrs, _values, _key);
         //Check that identical proposal does not exist
         if(_proposalStartTimes[proposalId] > 0) {
             revert();
         }
 
-        _proposals[proposalId] = proposal;
+        _proposals[proposalId].proposer = _msgSender();
+        _proposals[proposalId].propType = _propType;
+        _proposals[proposalId].opType = _opType;
+        _proposals[proposalId].key = _key;
+        _proposals[proposalId].values = _values;
+        _proposals[proposalId].addrs = _addrs;
+        _proposals[proposalId].percentToPass = _percentToPass;
+        _proposals[proposalId].totalVoters = 0;
+        _proposals[proposalId].totalWeight = 0;
+
         _proposalStatus[proposalId] = HEOLib.ProposalStatus.OPEN;
         _proposalStartTimes[proposalId] = block.timestamp;
         _proposalDurations[proposalId] = _duration;
         _activeProposals.push(proposalId);
-        emit ProposalCreated(proposalId, proposal.proposer);
+        emit ProposalCreated(proposalId, _msgSender());
     }
 
     /**
@@ -238,7 +242,7 @@ contract HEODAO is Ownable, ReentrancyGuard {
         require(_proposalStatus[_proposalId] == HEOLib.ProposalStatus.OPEN);
         require(_heoStaking.voterStake(_msgSender()) >= _weight);
         HEOLib.Proposal storage proposal = _proposals[_proposalId];
-        require((block.timestamp.sub(_proposalStartTimes[_proposalId])) <=  _proposalDurations[_proposalId],
+        require((block.timestamp - _proposalStartTimes[_proposalId]) <=  _proposalDurations[_proposalId],
             "proposal has expired");
         require(allowedToVote(_msgSender(), proposal.propType));
         require(_vote <= proposal.values.length, "vote out of range");
@@ -246,15 +250,15 @@ contract HEODAO is Ownable, ReentrancyGuard {
         if(proposal.stakes[voter] > 0) {
             //If this voter has already staked his votes, unstake them first
             uint256 lastStake = proposal.stakes[voter];
-            proposal.totalWeight = proposal.totalWeight.sub(lastStake);
-            proposal.totalVoters = proposal.totalVoters.sub(1);
-            proposal.votes[_vote] = proposal.votes[_vote].sub(lastStake);
+            proposal.totalWeight = proposal.totalWeight - lastStake;
+            proposal.totalVoters = proposal.totalVoters - 1;
+            proposal.votes[_vote] = proposal.votes[_vote] - lastStake;
         }
         //stake the votes for the selected option
         proposal.stakes[voter] = _weight;
-        proposal.votes[_vote] = proposal.votes[_vote].add(_weight);
-        proposal.totalWeight = proposal.totalWeight.add(_weight);
-        proposal.totalVoters = proposal.totalVoters.add(1);
+        proposal.votes[_vote] = proposal.votes[_vote] + (_weight);
+        proposal.totalWeight = proposal.totalWeight + (_weight);
+        proposal.totalVoters = proposal.totalVoters + (1);
         emit ProposalVoteCast(_proposalId, voter, _vote, _weight);
     }
 
@@ -266,19 +270,19 @@ contract HEODAO is Ownable, ReentrancyGuard {
         HEOLib.Proposal storage proposal = _proposals[_proposalId];
         require(allowedToVote(_msgSender(), proposal.propType));
         if(proposal.totalVoters < _heoStaking.numVoters()) {
-            require((block.timestamp.sub(_proposalStartTimes[_proposalId])) >  _proposalDurations[_proposalId]);
+            require((block.timestamp - (_proposalStartTimes[_proposalId])) >  _proposalDurations[_proposalId]);
         }
         uint256 winnerOption;
         uint256 winnerWeight;
         bool tie = false;
-        uint256 minWeight = (proposal.totalWeight.div(100)).mul(proposal.percentToPass);
-        for(uint256 i = 0; i <= proposal.values.length; i++) {
-            if(proposal.votes[i] >= minWeight) {
-                if(proposal.votes[i] > winnerWeight) {
-                    winnerWeight = proposal.votes[i];
-                    winnerOption = i;
+        uint256 minWeight = (proposal.totalWeight / (100)) * (proposal.percentToPass);
+        for(uint256 propCounter = 0; propCounter <= proposal.values.length; propCounter++) {
+            if(proposal.votes[propCounter] >= minWeight) {
+                if(proposal.votes[propCounter] > winnerWeight) {
+                    winnerWeight = proposal.votes[propCounter];
+                    winnerOption = propCounter;
                     tie = false;
-                } else if (proposal.votes[i] == winnerWeight) {
+                } else if (proposal.votes[propCounter] == winnerWeight) {
                     tie = true;
                 }
             }
@@ -287,7 +291,7 @@ contract HEODAO is Ownable, ReentrancyGuard {
         if(!tie) {
             if(winnerOption > 0 && winnerOption <= proposal.values.length) {
                 //valid winner
-                uint256 winnerIndex = winnerOption.sub(1);
+                uint256 winnerIndex = winnerOption - (1);
                 if(proposal.propType == HEOLib.ProposalType.ADDRVAL || proposal.propType == HEOLib.ProposalType.INTVAL) {
                     success = _executeParamProposal(proposal, winnerIndex);
                 } else if(proposal.propType == HEOLib.ProposalType.BUDGET) {
@@ -385,7 +389,7 @@ contract HEODAO is Ownable, ReentrancyGuard {
         return _activeProposals;
     }
     function minWeightToPass(bytes32 _proposalId) public view returns(uint256) {
-        uint256 minWeight = (_proposals[_proposalId].totalWeight.div(100)).mul(_proposals[_proposalId].percentToPass);
+        uint256 minWeight = (_proposals[_proposalId].totalWeight / (100)) * (_proposals[_proposalId].percentToPass);
         return minWeight;
     }
     function proposalStatus(bytes32 _proposalId) public view returns(uint8) {

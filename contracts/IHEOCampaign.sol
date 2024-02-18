@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 
-pragma solidity >=0.6.1;
+pragma solidity >=0.8.20;
 
 interface IHEOCampaign {
     function maxAmount() external view returns (uint256);

@@ -1,17 +1,17 @@
 // SPDX-License-Identifier: MIT
-pragma solidity >=0.6.1;
+pragma solidity >=0.8.20;
 
-import "openzeppelin-solidity/contracts/token/ERC20/ERC20.sol";
-import "openzeppelin-solidity/contracts/token/ERC20/SafeERC20.sol";
-import "openzeppelin-solidity/contracts/access/Ownable.sol";
-import "openzeppelin-solidity/contracts/math/SafeMath.sol";
-import "openzeppelin-solidity/contracts/utils/ReentrancyGuard.sol";
+import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import "@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts/utils/math/Math.sol";
+import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
+import "@openzeppelin/contracts/utils/Context.sol";
 import "./HEOCampaign.sol";
 import "./IHEOCampaignFactory.sol";
 import "./HEODAO.sol";
 
-contract HEOCampaignFactory is IHEOCampaignFactory, Ownable, ReentrancyGuard {
-    using SafeMath for uint256;
+contract HEOCampaignFactory is IHEOCampaignFactory, Context, Ownable, ReentrancyGuard {
     using SafeERC20 for ERC20;
 
     HEODAO private _dao;
@@ -23,7 +23,7 @@ contract HEOCampaignFactory is IHEOCampaignFactory, Ownable, ReentrancyGuard {
         uint256 maxAmount
     );
 
-    constructor (HEODAO dao) public {
+    constructor (HEODAO dao) Ownable(msg.sender) public {
         require(address(dao) != address(0));
         _dao = dao;
     }

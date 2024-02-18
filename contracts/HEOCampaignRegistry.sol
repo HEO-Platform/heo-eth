@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: MIT
-pragma solidity >=0.6.1;
+pragma solidity >=0.8.20;
 
-import "openzeppelin-solidity/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts/utils/Context.sol";
 import "./IHEOCampaignFactory.sol";
 import "./IHEOCampaign.sol";
 import "./IHEOCampaignRegistry.sol";
@@ -11,7 +12,7 @@ import "./HEOLib.sol";
 /*
 * This contract acts as storage for campaigns.
 */
-contract HEOCampaignRegistry is IHEOCampaignRegistry, Ownable {
+contract HEOCampaignRegistry is IHEOCampaignRegistry, Context, Ownable {
     HEODAO private _dao;
 
     /*
@@ -29,7 +30,7 @@ contract HEOCampaignRegistry is IHEOCampaignRegistry, Ownable {
     */
     address[] private _campaigns;
 
-    constructor (HEODAO dao) public {
+    constructor (HEODAO dao) Ownable(msg.sender) public {
         require(address(dao) != address(0), "HEOCampaignFactory: DAO cannot be zero-address");
         _dao = dao;
     }

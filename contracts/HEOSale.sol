@@ -1,18 +1,16 @@
 // SPDX-License-Identifier: MIT
-pragma solidity >=0.6.1;
+pragma solidity >=0.8.20;
 
-import "openzeppelin-solidity/contracts/math/Math.sol";
-import "openzeppelin-solidity/contracts/GSN/Context.sol";
-import "openzeppelin-solidity/contracts/math/SafeMath.sol";
-import "openzeppelin-solidity/contracts/token/ERC20/ERC20.sol";
-import "openzeppelin-solidity/contracts/token/ERC20/SafeERC20.sol";
-import "openzeppelin-solidity/contracts/utils/ReentrancyGuard.sol";
+import "@openzeppelin/contracts/utils/math/Math.sol";
+import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
+import "@openzeppelin/contracts/utils/Context.sol";
 import "./IHEOPriceOracle.sol";
 import "./HEODAO.sol";
 import "./HEOLib.sol";
 
 contract HEOSale is IHEOBudget, Context, ReentrancyGuard {
-    using SafeMath for uint256;
     using SafeERC20 for ERC20;
     struct Sale {
         bytes32 key;
@@ -58,7 +56,7 @@ contract HEOSale is IHEOBudget, Context, ReentrancyGuard {
 
     function calculateEquity(uint256 amount, address token) external view returns (uint256) {
         (uint256 heoPrice, uint256 priceDecimals) = IHEOPriceOracle(_dao.heoParams().contractAddress(HEOLib.PRICE_ORACLE)).getPrice(token);
-        uint256 equity = amount.div(heoPrice).mul(priceDecimals);
+        uint256 equity = amount / (heoPrice) * (priceDecimals);
         return equity;
     }
 
@@ -68,7 +66,7 @@ contract HEOSale is IHEOBudget, Context, ReentrancyGuard {
         require(approvedInvestors[_msgSender()] > 0, "HEOSale: address is not approved to invest");
         (uint256 heoPrice, uint256 priceDecimals) = IHEOPriceOracle(_dao.heoParams().contractAddress(HEOLib.PRICE_ORACLE)).getPrice(acceptedToken);
         require(heoPrice > 0, "HEOSale: HEO price is not set acceptedToken");
-        uint256 equity = amount.div(heoPrice).mul(priceDecimals);
+        uint256 equity = amount / (heoPrice) * (priceDecimals);
         require(unsoldBalance >= equity, "HEOSale: not enough HEO to sell");
 
         bytes32 key = keccak256(abi.encodePacked(_msgSender(), amount, block.timestamp));
@@ -86,9 +84,9 @@ contract HEOSale is IHEOBudget, Context, ReentrancyGuard {
         _sales[key] = sale;
         _salesByInvestor[_msgSender()].push(key);
 
-        unsoldBalance = unsoldBalance.sub(equity);
-        totalSales = totalSales.add(1);
-        totalRaised = totalRaised.add(amount);
+        unsoldBalance = unsoldBalance - (equity);
+        totalSales = totalSales + (1);
+        totalRaised = totalRaised + (amount);
         ERC20 paymentToken = ERC20(acceptedToken);
         paymentToken.safeTransferFrom(_msgSender(), address(_dao), amount);
         emit InvestmentReceived(_msgSender(), amount, equity);
@@ -102,11 +100,11 @@ contract HEOSale is IHEOBudget, Context, ReentrancyGuard {
         if(tge == 0 || block.timestamp < tge) {
             return 0;
         }
-        uint256 vestingEnd = _sales[key].vestingSeconds.add(tge);
+        uint256 vestingEnd = _sales[key].vestingSeconds + (tge);
         if(block.timestamp >= vestingEnd) {
             return _sales[key].equity;
         }
-        return _sales[key].equity.div(_sales[key].vestingSeconds).mul(block.timestamp - tge);
+        return _sales[key].equity / (_sales[key].vestingSeconds) * (block.timestamp - tge);
     }
 
     function saleAmount(bytes32 key) external view returns(uint256) {
@@ -136,7 +134,7 @@ contract HEOSale is IHEOBudget, Context, ReentrancyGuard {
     function claimEquity(address destination, bytes32 key, uint256 amount) public {
         Sale storage sale = _sales[key];
         require(sale.investor == _msgSender(), "HEOSale: caller is not the investor");
-        uint256 newClaimed = sale.claimed.add(amount);
+        uint256 newClaimed = sale.claimed + (amount);
         require(newClaimed <= vestedEquity(key), "HEOSale: claim exceeds vested equity");
         sale.claimed = newClaimed;
         ERC20(_dao.heoParams().contractAddress(HEOLib.PLATFORM_TOKEN_ADDRESS)).safeTransfer(destination, amount);
@@ -158,7 +156,7 @@ contract HEOSale is IHEOBudget, Context, ReentrancyGuard {
         require(_token == _dao.heoParams().contractAddress(HEOLib.PLATFORM_TOKEN_ADDRESS),
         "Private Sale accepts only platform token as equity");
         ERC20(_token).safeTransferFrom(_msgSender(), address(this), _amount);
-        unsoldBalance = unsoldBalance.add(_amount);
+        unsoldBalance = unsoldBalance + (_amount);
     }
 
     function assignTreasurer(address _treasurer) external override onlyOwner {
